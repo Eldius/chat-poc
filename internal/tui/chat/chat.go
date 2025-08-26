@@ -41,6 +41,9 @@ type chatModel struct {
 	height int
 
 	ctx context.Context
+
+	//myMsgsStyle    lipgloss.Style
+	//agentMsgsStyle lipgloss.Style
 }
 
 func NewChatModel(ctx context.Context, cb SendCallback) tea.Model {
@@ -51,18 +54,18 @@ func NewChatModel(ctx context.Context, cb SendCallback) tea.Model {
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
 
-	//width, height, err := getTerminalSize()
-	//if err != nil {
-	//	fmt.Println("Erro ao obter tamanho da tela:", err)
-	//}
-	//
-	//fmt.Println("Tamanho da tela:", width, height)
-	//
-	//vp := viewport.New(width-4, height-4)
+	width, height, err := getTerminalSize()
+	if err != nil {
+		fmt.Println("Erro ao obter tamanho da tela:", err)
+	}
 
-	vp := viewport.New(10, 10)
+	fmt.Println("Tamanho da tela:", width, height)
+
+	vp := viewport.New(width-4, height-4)
+
+	//vp := viewport.New(10, 10)
 	vp.SetContent("")
-	vp.KeyMap = viewport.KeyMap{} // sem bindings extras
+	vp.KeyMap = viewport.DefaultKeyMap() // sem bindings extras
 
 	return &chatModel{
 		vp:    vp,
@@ -77,7 +80,7 @@ func getTerminalSize() (int, int, error) {
 	fd := os.Stdout.Fd()
 
 	if !term.IsTerminal(fd) {
-		fmt.Println("Not running in a terminal.")
+		logs.NewLogger(nil).Debug("Not running in a terminal.")
 		return 80, 20, nil
 	}
 
@@ -89,30 +92,32 @@ func getTerminalSize() (int, int, error) {
 	return width, height, nil
 }
 
-func (m chatModel) Init() tea.Cmd {
+func (m *chatModel) Init() tea.Cmd {
 	logs.NewLogger(m.ctx).Debug("Init")
 	return tea.Batch(textinput.Blink, m.spin.Tick)
 }
 
-func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	logs.NewLogger(m.ctx, logs.KeyValueData{
 		"msg_type":  fmt.Sprintf("%T", msg),
 		"msg_value": fmt.Sprintf("%v", msg),
 	}).Debug("Update")
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
 		// Reservar linhas para input e status
 		// Aproximamos: input ocupa 1-2 linhas e status 1 linha
-		vpHeight := m.height - 4
-		vpWidth := m.width - 4
+		vpHeight := msg.Height - 6
+		vpWidth := msg.Width - 4
 		if vpHeight < 3 {
 			vpHeight = 3
 		}
-		if vpWidth > 10 {
+		if vpWidth < 10 {
 			vpWidth = 10
 		}
+
+		m.width = vpWidth
+		m.height = vpHeight
+
 		m.vp.Width = vpWidth
 		m.vp.Height = vpHeight
 		m.refreshViewport()
@@ -131,7 +136,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			// Adiciona mensagem do usuário e marca como processando
-			m.messages = append(m.messages, fmt.Sprintf("Você: %s", text))
+			m.messages = append(m.messages, lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("#2222AA")).Foreground(lipgloss.Color("#FFFFFF")).Render(fmt.Sprintf("Você: %s", text)))
 			m.pendingUser = text
 			m.processing = true
 			m.input.SetValue("")
@@ -147,13 +152,13 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case sendResultMsg:
 		m.processing = false
 		if msg.err != nil {
-			m.messages = append(m.messages, fmt.Sprintf("Erro: %v", msg.err))
+			m.messages = append(m.messages, lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("#EE2222")).Render(fmt.Sprintf("Erro: %v", msg.err)))
 		} else {
-			m.messages = append(m.messages, fmt.Sprintf("Assistente: %s", msg.resp))
+			m.messages = append(m.messages, lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("#222222")).Foreground(lipgloss.Color("#22AA22")).Render(fmt.Sprintf("Assistente: %s", msg.resp)))
 		}
 		m.pendingUser = ""
 		m.refreshViewport()
-		return m, nil
+		return m, m.input.Focus()
 
 	case spinner.TickMsg:
 		if m.processing {
@@ -176,7 +181,7 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m chatModel) View() string {
+func (m *chatModel) View() string {
 	logs.NewLogger(m.ctx).Debug("View")
 	header := lipgloss.NewStyle().Bold(true).Render("Chat")
 	divider := strings.Repeat("─", maxIntValue(10, m.width))
@@ -195,7 +200,7 @@ func (m chatModel) View() string {
 	)
 }
 
-func (m chatModel) refreshViewport() {
+func (m *chatModel) refreshViewport() {
 	logs.NewLogger(m.ctx).Debug("refreshViewport")
 	content := strings.Join(m.messages, "\n\n")
 	logs.NewLogger(m.ctx, logs.KeyValueData{
@@ -209,7 +214,7 @@ func (m chatModel) refreshViewport() {
 	m.vp.GotoBottom()
 }
 
-func (m chatModel) runCallback(userText string) tea.Cmd {
+func (m *chatModel) runCallback(userText string) tea.Cmd {
 	logs.NewLogger(m.ctx, logs.KeyValueData{
 		"user_text": userText,
 	}).Debug("runCallback")
