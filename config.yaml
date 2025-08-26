@@ -1,0 +1,12 @@
+---
+telemetry:
+  enabled: true
+  traces:
+    # endpoint: "[fe80::27f2:bbf3:9730:6514]:55689"
+    endpoint: "192.168.0.166:55689"
+    # endpoint: "192.168.0.130:55689"
+  metrics:
+    # endpoint: "[fe80::27f2:bbf3:9730:6514]:55689"
+    endpoint: "192.168.0.166:55689"
+    # endpoint: "192.168.0.130:55689"
+
