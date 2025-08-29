@@ -3,14 +3,19 @@ package service
 import (
 	"chat-poc/internal/tui/chat"
 	"context"
+	"database/sql"
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/eldius/langchaingo-chromem-vectorstor/vectorstor/chromem"
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/tmc/langchaingo/chains"
 	"github.com/tmc/langchaingo/embeddings"
 	bedrockEmb "github.com/tmc/langchaingo/embeddings/bedrock"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/bedrock"
+	"github.com/tmc/langchaingo/memory"
+	"github.com/tmc/langchaingo/memory/sqlite3"
 	"github.com/tmc/langchaingo/vectorstores"
 )
 
@@ -56,9 +61,22 @@ func NewDefaultConversation() (*Conversation, error) {
 //}
 
 func (c *Conversation) Chat(ctx context.Context) error {
-	// Exemplo de callback: simula latência e retorna o texto em maiúsculas.
+
+	db, err := sql.Open("sqlite3", ".db/chat.db")
+	if err != nil {
+		return fmt.Errorf("opening sqlite3 db: %w", err)
+	}
+
+	chatHistory := sqlite3.NewSqliteChatMessageHistory(sqlite3.WithDB(db))
+	conversationBuffer := memory.NewConversationBuffer(memory.WithChatHistory(chatHistory))
+	llmChain := chains.NewConversation(c.m, conversationBuffer)
+
+	if err := prepare(ctx, db); err != nil {
+		return err
+	}
+
 	cb := func(ctx context.Context, userInput string) (string, error) {
-		return c.m.Call(ctx, userInput)
+		return chains.Run(ctx, llmChain, userInput)
 	}
 
 	p := tea.NewProgram(chat.NewChatModel(ctx, cb), tea.WithAltScreen())
@@ -66,4 +84,30 @@ func (c *Conversation) Chat(ctx context.Context) error {
 		fmt.Println("Erro ao executar TUI:", err)
 	}
 	return nil
+}
+
+func prepare(ctx context.Context, db *sql.DB) error {
+	// check if db has any records
+	var count int
+	res := db.QueryRowContext(ctx, "SELECT count(id) FROM langchaingo_messages")
+	if err := res.Err(); err != nil {
+		return err
+	}
+
+	if err := res.Scan(&count); err != nil {
+		return err
+	}
+
+	if count > 0 {
+		return nil
+	}
+
+	_, err := db.ExecContext(
+		ctx,
+		"INSERT INTO langchaingo_messages(session, content, type) VALUES (?, ?, ?)",
+		"example",
+		"Hi there, my name is Murilo!",
+		llms.ChatMessageTypeHuman,
+	)
+	return err
 }

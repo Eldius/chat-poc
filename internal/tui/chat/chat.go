@@ -136,7 +136,14 @@ func (m *chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			// Adiciona mensagem do usuário e marca como processando
-			m.messages = append(m.messages, lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("#2222AA")).Foreground(lipgloss.Color("#FFFFFF")).Render(fmt.Sprintf("Você: %s", text)))
+			m.messages = append(
+				m.messages,
+				lipgloss.NewStyle().
+					Bold(true).
+					Background(lipgloss.Color("#2222AA")).
+					Foreground(lipgloss.Color("#FFFFFF")).
+					Render(fmt.Sprintf("You:\n\t%s", text)),
+			)
 			m.pendingUser = text
 			m.processing = true
 			m.input.SetValue("")
@@ -154,7 +161,13 @@ func (m *chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.messages = append(m.messages, lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("#EE2222")).Render(fmt.Sprintf("Erro: %v", msg.err)))
 		} else {
-			m.messages = append(m.messages, lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("#222222")).Foreground(lipgloss.Color("#22AA22")).Render(fmt.Sprintf("Assistente: %s", msg.resp)))
+			m.messages = append(
+				m.messages,
+				lipgloss.NewStyle().
+					Bold(true).
+					Background(lipgloss.Color("#222222")).
+					Foreground(lipgloss.Color("#22AA22")).
+					Render(fmt.Sprintf("Assistente:\n\t%s", msg.resp)))
 		}
 		m.pendingUser = ""
 		m.refreshViewport()
