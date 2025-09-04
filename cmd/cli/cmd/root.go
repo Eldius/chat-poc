@@ -22,16 +22,18 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	PersistentPreRunE: setup.PersistentPreRunE(
-		"my-chat-app", setup.WithConfigFileToBeUsed(cfgFile),
+		"my-chat-app",
+		setup.WithConfigFileToBeUsed(cfgFile),
 		setup.WithDefaultCfgFileLocations("."),
 		setup.WithDefaultCfgFileName("config"),
+		setup.WithEnvPrefix("CHAT"),
 		setup.WithDefaultValues(map[string]any{
 			initCfg.LogLevelKey:      initCfg.LogLevelDEBUG,
 			initCfg.LogFormatKey:     initCfg.LogFormatJSON,
 			initCfg.LogOutputFileKey: "execution.log",
 		}),
 		setup.WithOpenTelemetryOptions(
-			telemetry.WithOtelEnabled(true),
+			telemetry.WithOtelEnabled(false),
 			telemetry.WithService(config.AppName, config.Version, "local"),
 		),
 	),

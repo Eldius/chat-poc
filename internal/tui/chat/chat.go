@@ -42,8 +42,9 @@ type chatModel struct {
 
 	ctx context.Context
 
-	//myMsgsStyle    lipgloss.Style
-	//agentMsgsStyle lipgloss.Style
+	errorTextStyle     lipgloss.Style
+	userMsgsStyle      lipgloss.Style
+	assistantMsgsStyle lipgloss.Style
 }
 
 func NewChatModel(ctx context.Context, cb SendCallback) tea.Model {
@@ -73,6 +74,17 @@ func NewChatModel(ctx context.Context, cb SendCallback) tea.Model {
 		spin:  sp,
 		cb:    cb,
 		ctx:   ctx,
+		errorTextStyle: lipgloss.NewStyle().
+			Bold(true).
+			Background(lipgloss.Color("#EE2222")),
+		assistantMsgsStyle: lipgloss.NewStyle().
+			Bold(true).
+			Background(lipgloss.Color("#222222")).
+			Foreground(lipgloss.Color("#22AA22")),
+		userMsgsStyle: lipgloss.NewStyle().
+			Bold(true).
+			Background(lipgloss.Color("#2222AA")).
+			Foreground(lipgloss.Color("#FFFFFF")),
 	}
 }
 
@@ -93,15 +105,15 @@ func getTerminalSize() (int, int, error) {
 }
 
 func (m *chatModel) Init() tea.Cmd {
-	logs.NewLogger(m.ctx).Debug("Init")
+	//logs.NewLogger(m.ctx).Debug("Init")
 	return tea.Batch(textinput.Blink, m.spin.Tick)
 }
 
 func (m *chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	logs.NewLogger(m.ctx, logs.KeyValueData{
-		"msg_type":  fmt.Sprintf("%T", msg),
-		"msg_value": fmt.Sprintf("%v", msg),
-	}).Debug("Update")
+	//logs.NewLogger(m.ctx, logs.KeyValueData{
+	//	"msg_type":  fmt.Sprintf("%T", msg),
+	//	"msg_value": fmt.Sprintf("%v", msg),
+	//}).Debug("Update")
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		// Reservar linhas para input e status
@@ -135,13 +147,9 @@ func (m *chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if text == "" {
 				return m, nil
 			}
-			// Adiciona mensagem do usuário e marca como processando
 			m.messages = append(
 				m.messages,
-				lipgloss.NewStyle().
-					Bold(true).
-					Background(lipgloss.Color("#2222AA")).
-					Foreground(lipgloss.Color("#FFFFFF")).
+				m.userMsgsStyle.
 					Render(fmt.Sprintf("You:\n\t%s", text)),
 			)
 			m.pendingUser = text
@@ -157,16 +165,15 @@ func (m *chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case sendResultMsg:
+		//vpTxtWidth := m.vp.Width - 4
 		m.processing = false
 		if msg.err != nil {
-			m.messages = append(m.messages, lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("#EE2222")).Render(fmt.Sprintf("Erro: %v", msg.err)))
+			m.messages = append(m.messages, m.errorTextStyle.Render(fmt.Sprintf("Erro: %v", msg.err)))
+			//msg.err = nil
 		} else {
 			m.messages = append(
 				m.messages,
-				lipgloss.NewStyle().
-					Bold(true).
-					Background(lipgloss.Color("#222222")).
-					Foreground(lipgloss.Color("#22AA22")).
+				m.assistantMsgsStyle.
 					Render(fmt.Sprintf("Assistente:\n\t%s", msg.resp)))
 		}
 		m.pendingUser = ""
@@ -195,7 +202,7 @@ func (m *chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *chatModel) View() string {
-	logs.NewLogger(m.ctx).Debug("View")
+	//logs.NewLogger(m.ctx).Debug("View")
 	header := lipgloss.NewStyle().Bold(true).Render("Chat")
 	divider := strings.Repeat("─", maxIntValue(10, m.width))
 	status := ""
@@ -214,11 +221,11 @@ func (m *chatModel) View() string {
 }
 
 func (m *chatModel) refreshViewport() {
-	logs.NewLogger(m.ctx).Debug("refreshViewport")
+	//logs.NewLogger(m.ctx).Debug("refreshViewport")
 	content := strings.Join(m.messages, "\n\n")
-	logs.NewLogger(m.ctx, logs.KeyValueData{
-		"chat_content": content,
-	}).Debug("refreshViewport")
+	//logs.NewLogger(m.ctx, logs.KeyValueData{
+	//	"chat_content": content,
+	//}).Debug("refreshViewport")
 	if m.processing && m.pendingUser != "" {
 		// Mostra feedback durante o processamento
 		content += "\n\nAssistente: pensando..."

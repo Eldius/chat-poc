@@ -9,7 +9,10 @@ require (
 	github.com/charmbracelet/x/term v0.2.1
 	github.com/eldius/initial-config-go v0.0.23
 	github.com/eldius/langchaingo-chromem-vectorstor v0.0.0
-	github.com/mattn/go-sqlite3 v1.14.17
+	github.com/jmoiron/sqlx v1.4.0
+	github.com/lib/pq v1.10.9
+	github.com/mashiike/redshift-data-sql-driver v0.2.0
+	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/spf13/cobra v1.9.1
 	github.com/tmc/langchaingo v0.1.13
 )
@@ -30,6 +33,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/bedrockruntime v1.8.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/redshiftdata v1.20.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.20.6 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.23.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.28.7 // indirect

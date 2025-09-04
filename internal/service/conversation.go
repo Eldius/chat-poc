@@ -1,14 +1,20 @@
 package service
 
 import (
+	"chat-poc/internal/tools/transaction"
 	"chat-poc/internal/tui/chat"
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
+	"runtime/debug"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/eldius/initial-config-go/logs"
 	"github.com/eldius/langchaingo-chromem-vectorstor/vectorstor/chromem"
+	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/tmc/langchaingo/agents"
 	"github.com/tmc/langchaingo/chains"
 	"github.com/tmc/langchaingo/embeddings"
 	bedrockEmb "github.com/tmc/langchaingo/embeddings/bedrock"
@@ -16,6 +22,7 @@ import (
 	"github.com/tmc/langchaingo/llms/bedrock"
 	"github.com/tmc/langchaingo/memory"
 	"github.com/tmc/langchaingo/memory/sqlite3"
+	"github.com/tmc/langchaingo/tools"
 	"github.com/tmc/langchaingo/vectorstores"
 )
 
@@ -60,28 +67,53 @@ func NewDefaultConversation() (*Conversation, error) {
 //	}
 //}
 
-func (c *Conversation) Chat(ctx context.Context) error {
+func (c *Conversation) Chat(ctx context.Context, session string) error {
 
 	db, err := sql.Open("sqlite3", ".db/chat.db")
 	if err != nil {
 		return fmt.Errorf("opening sqlite3 db: %w", err)
 	}
 
-	chatHistory := sqlite3.NewSqliteChatMessageHistory(sqlite3.WithDB(db))
+	if session == "" {
+		session = uuid.NewString()
+	}
+	chatHistory := sqlite3.NewSqliteChatMessageHistory(sqlite3.WithDB(db), sqlite3.WithSession(session))
 	conversationBuffer := memory.NewConversationBuffer(memory.WithChatHistory(chatHistory))
-	llmChain := chains.NewConversation(c.m, conversationBuffer)
+	//llmChain := chains.NewConversation(c.m, conversationBuffer)
+
+	lookup, err := transaction.NewDefaultLookup()
+	if err != nil {
+		return fmt.Errorf("creating transaction lookup: %w", err)
+	}
+	agentTools := []tools.Tool{
+		lookup,
+	}
+
+	// 3. Initialize the agent
+	// NewOneShotAgent is a simple agent that uses a single LLM call for reasoning.
+	agent := agents.NewOneShotAgent(c.m, agentTools, agents.WithMaxIterations(5), agents.WithMemory(conversationBuffer))
+	// 4. Create the agent executor
+	executor := agents.NewExecutor(agent)
 
 	if err := prepare(ctx, db); err != nil {
 		return err
 	}
 
 	cb := func(ctx context.Context, userInput string) (string, error) {
-		return chains.Run(ctx, llmChain, userInput)
+		logs.NewLogger(ctx, logs.KeyValueData{
+			"user_input": userInput,
+		}).Debug("callback")
+		return chains.Run(ctx, executor, userInput, chains.WithCallback(NewCustomHandler()))
 	}
 
 	p := tea.NewProgram(chat.NewChatModel(ctx, cb), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
-		fmt.Println("Erro ao executar TUI:", err)
+		err := fmt.Errorf("erro ao executar tui: %w", err)
+		fmt.Println("Stack Trace:")
+		stackTrace := string(debug.Stack())
+		fmt.Println(stackTrace)
+		slog.With("error", err, "stack_trace", stackTrace).Error("chat app has panicked")
+		return err
 	}
 	return nil
 }
