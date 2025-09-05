@@ -32,6 +32,11 @@ to quickly create a Cobra application.`,
 			initCfg.LogFormatKey:     initCfg.LogFormatJSON,
 			initCfg.LogOutputFileKey: "execution.log",
 		}),
+		setup.WithProps(
+			config.BedrockRegionProp,
+			config.BedrockInferenceModelProp,
+			config.BedrockEmbeddingModelProp,
+		),
 		setup.WithOpenTelemetryOptions(
 			telemetry.WithOtelEnabled(false),
 			telemetry.WithService(config.AppName, config.Version, "local"),

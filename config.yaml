@@ -5,3 +5,9 @@ db:
   host: "vpn-dataplat.adapter.datalake.bemobi.com"
   port: 5439
   name: master
+bedrock:
+  region: us-east-1
+  inference:
+    model: anthropic.claude-3-haiku-20240307-v1:0
+  embedding:
+    model: amazon.titan-embed-text-v1

@@ -59,7 +59,62 @@ func (t Lookup) Name() string {
 }
 
 func (t Lookup) Description() string {
-	return "Useful for when you need to retrieve a specific transaction by its unique ID. The input must be a transaction ID, for example, 'tx_12345' or a UUID key."
+	return `Useful for when you need to retrieve a specific transaction by its unique ID. The input must be a transaction ID, for example, 'tx_12345' or a UUID key.
+It will return the transaction details in JSON format.
+Here some attributes that can be returned:
+transaction_id: transaction id
+acquirer: acquirer name
+company_id: partner company
+workspace_id: partner workspace
+application_id: partner application
+application_name: partner application name
+raw_application_id: partner identification
+merchant_id: acquirer merchant identification id
+pos: acquirer point of sale identification
+type: payment type
+amount: payment amount (in cents, for example: 100 = R$ 1.00)
+currency: payment currency
+installments: payment installments count
+recurrent: is this payment recurrent?
+soft_descriptor: payment soft descriptor
+status: payment status
+payment_id: registered payment id
+authorization_code: payment authorization code
+nsu: payment nsu (Número Sequencial Único)
+response_code: payment status code (following ABECS rules)
+tokenized: this payment used a network token?
+tid: payment tid
+date_timestamp: event timestamp in unix milissecond timestamp notation
+dt: a text formatted timestamp
+refund_amount: total refunded amount (in cents, for example: 100 = R$ 1.00)
+retry_after: if payment was denied, it could be retried after this date
+has_customer_information: does this payment have customer information?
+is_full_refunded: does this payment full refunded?
+is_waiting_confirmation: does this payment waiting for confirmation?
+is_authenticated: does this payment was authenticated?
+is_data_only: does this payment was a data only?
+is_denied: does this payment denied?
+is_acquirer_fallback: does this payment an acquirer fallback?
+is_payment_method_fallback: does this payment a payment method fallback?
+is_digital_wallet: does this payment a digital wallet payment?
+fallback_reason: the reason payment fallback was made (if it is a fallback)
+contains_error: does this payment attemp has error?
+card_token: card identification
+card_hash: card hash
+card_brand: card brand
+card_holder: card holder name
+card_type: card type
+cvv_informed: does the CVV security code informed?
+correlation_id: a payment identification similar to transaction_id attribute
+trace_id: a code to identify payment request through systems
+error_code: payment error code (if occurred)
+error_status_code: payment error status code (if occurred)
+error_status: error status (if occurred)
+error_type: error type (if occurred)
+error_operation: error operation (if occurred)
+error_message: error message (if occurred)
+transaction_date: transaction date
+`
 }
 
 func (t Lookup) Call(ctx context.Context, input string) (string, error) {

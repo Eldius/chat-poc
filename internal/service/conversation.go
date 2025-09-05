@@ -2,6 +2,8 @@ package service
 
 import (
 	"bytes"
+	"chat-poc/internal/config"
+	"chat-poc/internal/tools/docs"
 	"chat-poc/internal/tools/transaction"
 	"chat-poc/internal/tui/chat"
 	"context"
@@ -13,6 +15,8 @@ import (
 	"runtime/debug"
 	"strings"
 
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/eldius/initial-config-go/httpclient"
 	"github.com/eldius/initial-config-go/logs"
@@ -34,12 +38,6 @@ import (
 	"github.com/tmc/langchaingo/vectorstores"
 )
 
-const (
-	//inferenceModel = "anthropic.claude-3-5-haiku-20241022-v1:0"
-	inferenceModel = "anthropic.claude-3-haiku-20240307-v1:0"
-	embeddingModel = "amazon.titan-embed-text-v1"
-)
-
 type Conversation struct {
 	m   llms.Model
 	emm embeddings.Embedder
@@ -47,14 +45,30 @@ type Conversation struct {
 }
 
 func NewDefaultConversation() (*Conversation, error) {
+
+	cfg, err := awsConfig.LoadDefaultConfig(
+		context.Background(),
+		awsConfig.WithHTTPClient(httpclient.NewHTTPClient()),
+		awsConfig.WithRegion(config.GetBedrockRegion()),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("loading AWS config: %w", err)
+	}
+
+	// Create a Bedrock Runtime client using the configured SDK
+	bedrockClient := bedrockruntime.NewFromConfig(cfg)
 	m, err := bedrock.New(
-		bedrock.WithModel(inferenceModel),
+		bedrock.WithModel(config.GetBedrockInferenceModel()),
+		bedrock.WithClient(bedrockClient),
+		bedrock.WithCallback(newHandler()),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating bedrock model: %w", err)
 	}
 
-	emm, err := bedrockEmb.NewBedrock(bedrockEmb.WithModel(embeddingModel))
+	emm, err := bedrockEmb.NewBedrock(
+		bedrockEmb.WithModel(config.GetBedrockEmbeddingModel()),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("creating bedrock embeddings: %w", err)
 	}
@@ -79,27 +93,30 @@ func (c *Conversation) Chat(ctx context.Context, session string) error {
 	if session == "" {
 		session = uuid.NewString()
 	}
-	chatHistory := sqlite3.NewSqliteChatMessageHistory(sqlite3.WithDB(db), sqlite3.WithSession(session))
+	chatHistory := sqlite3.NewSqliteChatMessageHistory(sqlite3.WithDB(db), sqlite3.WithSession(session), sqlite3.WithContext(ctx))
 	conversationBuffer := memory.NewConversationBuffer(memory.WithChatHistory(chatHistory))
-	//llmChain := chains.NewConversation(c.m, conversationBuffer)
 
 	lookup, err := transaction.NewDefaultLookup()
 	if err != nil {
 		return fmt.Errorf("creating transaction lookup: %w", err)
 	}
+	docSearch := docs.NewSearch(c.s)
+
 	agentTools := []tools.Tool{
 		lookup,
+		docSearch,
 	}
 
-	// 3. Initialize the agent
-	// NewOneShotAgent is a simple agent that uses a single LLM call for reasoning.
-	agent := agents.NewOneShotAgent(c.m, agentTools, agents.WithMaxIterations(5), agents.WithMemory(conversationBuffer))
-	// 4. Create the agent executor
-	executor := agents.NewExecutor(agent)
-
-	if err := prepare(ctx, db); err != nil {
-		return err
-	}
+	agent := agents.NewConversationalAgent(
+		c.m,
+		agentTools,
+		agents.WithMaxIterations(5),
+		agents.WithMemory(conversationBuffer),
+		agents.WithCallbacksHandler(newHandler()),
+		agents.WithCallbacksHandler(newHandler()),
+		agents.WithReturnIntermediateSteps(),
+	)
+	executor := agents.NewExecutor(agent, agents.WithCallbacksHandler(newHandler()))
 
 	cb := func(ctx context.Context, userInput string) (string, error) {
 		logs.NewLogger(ctx, logs.KeyValueData{
@@ -191,29 +208,4 @@ func (c *Conversation) QueryDocuments(ctx context.Context, query string) ([]sche
 		return nil, fmt.Errorf("querying vectorstore: %w", err)
 	}
 	return matchedDocs, nil
-}
-
-func prepare(ctx context.Context, db *sql.DB) error {
-	var count int
-	res := db.QueryRowContext(ctx, "SELECT count(id) FROM langchaingo_messages")
-	if err := res.Err(); err != nil {
-		return err
-	}
-
-	if err := res.Scan(&count); err != nil {
-		return err
-	}
-
-	if count > 0 {
-		return nil
-	}
-
-	_, err := db.ExecContext(
-		ctx,
-		"INSERT INTO langchaingo_messages(session, content, type) VALUES (?, ?, ?)",
-		"example",
-		"Hi there, my name is Murilo!",
-		llms.ChatMessageTypeHuman,
-	)
-	return err
 }
