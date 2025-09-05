@@ -112,10 +112,10 @@ github.com/dlclark/regexp2 v1.11.5 h1:Q/sSnsKerHeCkc/jSTNq1oCm7KiVgUMZRDUoRu0JQZ
 github.com/dlclark/regexp2 v1.11.5/go.mod h1:DHkYz0B9wPfa6wondMfaivmHpzrQ3v9q8cnmRbL6yW8=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
-github.com/eldius/initial-config-go v0.0.23 h1:UkXlEXusqV5RgRTAL6M0be0du0t9+QdfCx4mb9f9Rao=
-github.com/eldius/initial-config-go v0.0.23/go.mod h1:LRUqV710tJJTxqjmzO7QszAfKcA45sQoHspY1RzopYs=
-github.com/eldius/langchaingo-chromem-vectorstor v0.0.1 h1:/w5EIbz/uk/MNeZ3obEXdF+UlJwA7uPMz6uCSJGSet0=
-github.com/eldius/langchaingo-chromem-vectorstor v0.0.1/go.mod h1:jG65AC5013nCQS0ELITdbx50wwHVJzG6w8/flSMaSZU=
+github.com/eldius/initial-config-go v0.0.24 h1:TOoAGL/diD8u4SAJe1S327xJN9N7Ccy8TkZPv371Boo=
+github.com/eldius/initial-config-go v0.0.24/go.mod h1:LRUqV710tJJTxqjmzO7QszAfKcA45sQoHspY1RzopYs=
+github.com/eldius/langchaingo-chromem-vectorstor v0.0.2 h1:qouMd04PIhk4EQQMQoVtNj686WwWvgC1IxYpLwL0+mA=
+github.com/eldius/langchaingo-chromem-vectorstor v0.0.2/go.mod h1:jG65AC5013nCQS0ELITdbx50wwHVJzG6w8/flSMaSZU=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f h1:Y/CXytFA4m6baUTXGLOoWe4PQhGxaX0KpnayAqC48p4=

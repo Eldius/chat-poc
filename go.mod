@@ -7,8 +7,8 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.6
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/x/term v0.2.1
-	github.com/eldius/initial-config-go v0.0.23
-	github.com/eldius/langchaingo-chromem-vectorstor v0.0.1
+	github.com/eldius/initial-config-go v0.0.24
+	github.com/eldius/langchaingo-chromem-vectorstor v0.0.2
 	github.com/google/uuid v1.6.0
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
