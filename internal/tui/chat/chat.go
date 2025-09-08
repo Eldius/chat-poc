@@ -60,6 +60,8 @@ func NewChatModel(ctx context.Context, cb SendCallback) tea.Model {
 		fmt.Println("Erro ao obter tamanho da tela:", err)
 	}
 
+	in.Width = width - 5
+
 	fmt.Println("Tamanho da tela:", width, height)
 
 	vp := viewport.New(width-4, height-4)
@@ -114,6 +116,7 @@ func (m *chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	//	"msg_type":  fmt.Sprintf("%T", msg),
 	//	"msg_value": fmt.Sprintf("%v", msg),
 	//}).Debug("Update")
+	vpTxtWidth := m.width - 15
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		// Reservar linhas para input e status
@@ -150,7 +153,7 @@ func (m *chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.messages = append(
 				m.messages,
 				m.userMsgsStyle.
-					Render(fmt.Sprintf("You:\n\t%s", text)),
+					Render(fmt.Sprintf("You:\n\t%s", WordWrap(text, vpTxtWidth))),
 			)
 			m.pendingUser = text
 			m.processing = true
@@ -165,16 +168,15 @@ func (m *chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case sendResultMsg:
-		//vpTxtWidth := m.vp.Width - 4
 		m.processing = false
 		if msg.err != nil {
-			m.messages = append(m.messages, m.errorTextStyle.Render(fmt.Sprintf("Erro: %v", msg.err)))
+			m.messages = append(m.messages, m.errorTextStyle.Render(fmt.Sprintf("Erro: %v", WordWrap(msg.err.Error(), vpTxtWidth))))
 			//msg.err = nil
 		} else {
 			m.messages = append(
 				m.messages,
 				m.assistantMsgsStyle.
-					Render(fmt.Sprintf("Assistente:\n\t%s", msg.resp)))
+					Render(fmt.Sprintf("Assistente:\n\t%s", WordWrap(msg.resp, vpTxtWidth))))
 		}
 		m.pendingUser = ""
 		m.refreshViewport()

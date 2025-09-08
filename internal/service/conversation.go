@@ -122,7 +122,7 @@ func (c *Conversation) Chat(ctx context.Context, session string) error {
 		logs.NewLogger(ctx, logs.KeyValueData{
 			"user_input": userInput,
 		}).Debug("callback")
-		return chains.Run(ctx, executor, userInput, chains.WithCallback(newHandler()))
+		return chains.Run(ctx, executor, userInput, chains.WithCallback(newHandler()), chains.WithTemperature(0.8))
 	}
 
 	p := tea.NewProgram(chat.NewChatModel(ctx, cb), tea.WithAltScreen())
