@@ -162,5 +162,4 @@ func (t Lookup) Call(ctx context.Context, input string) (string, error) {
 
 	return string(b), nil
 
-	//return "", errors.New("transaction not found")
 }

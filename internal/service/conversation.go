@@ -39,9 +39,17 @@ import (
 )
 
 type Conversation struct {
-	m   llms.Model
-	emm embeddings.Embedder
-	s   vectorstores.VectorStore
+	m          llms.Model
+	emm        embeddings.Embedder
+	s          vectorstores.VectorStore
+	generation GenerationOpts
+}
+
+type GenerationOpts struct {
+	temp          float64
+	maxIterations int
+	topK          int
+	topP          float64
 }
 
 func NewDefaultConversation() (*Conversation, error) {
@@ -68,6 +76,7 @@ func NewDefaultConversation() (*Conversation, error) {
 
 	emm, err := bedrockEmb.NewBedrock(
 		bedrockEmb.WithModel(config.GetBedrockEmbeddingModel()),
+		bedrockEmb.WithClient(bedrockClient),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating bedrock embeddings: %w", err)
@@ -80,6 +89,12 @@ func NewDefaultConversation() (*Conversation, error) {
 	return &Conversation{
 		m: m,
 		s: s,
+		generation: GenerationOpts{
+			temp:          config.GetBedrockInferenceTemperature(),
+			maxIterations: config.GetBedrockInferenceMaxIterations(),
+			topK:          config.GetBedrockInferenceTopK(),
+			topP:          config.GetBedrockInferenceTopP(),
+		},
 	}, nil
 }
 
@@ -110,19 +125,32 @@ func (c *Conversation) Chat(ctx context.Context, session string) error {
 	agent := agents.NewConversationalAgent(
 		c.m,
 		agentTools,
-		agents.WithMaxIterations(5),
+		agents.WithMaxIterations(c.generation.maxIterations),
 		agents.WithMemory(conversationBuffer),
-		agents.WithCallbacksHandler(newHandler()),
 		agents.WithCallbacksHandler(newHandler()),
 		agents.WithReturnIntermediateSteps(),
 	)
-	executor := agents.NewExecutor(agent, agents.WithCallbacksHandler(newHandler()))
+	executor := agents.NewExecutor(
+		agent,
+		agents.WithCallbacksHandler(newHandler()),
+		agents.WithReturnIntermediateSteps(),
+		agents.WithMaxIterations(c.generation.maxIterations),
+		//agents.WithPrompt()
+	)
 
 	cb := func(ctx context.Context, userInput string) (string, error) {
 		logs.NewLogger(ctx, logs.KeyValueData{
 			"user_input": userInput,
 		}).Debug("callback")
-		return chains.Run(ctx, executor, userInput, chains.WithCallback(newHandler()), chains.WithTemperature(0.8))
+		return chains.Run(
+			ctx,
+			executor,
+			userInput,
+			chains.WithCallback(newHandler()),
+			chains.WithTemperature(c.generation.temp),
+			chains.WithTopK(c.generation.topK),
+			chains.WithTopP(c.generation.topP),
+		)
 	}
 
 	p := tea.NewProgram(chat.NewChatModel(ctx, cb), tea.WithAltScreen())
@@ -203,7 +231,7 @@ func parserDoc(ctx context.Context, reader io.Reader) ([]schema.Document, string
 }
 
 func (c *Conversation) QueryDocuments(ctx context.Context, query string) ([]schema.Document, error) {
-	matchedDocs, err := c.s.SimilaritySearch(ctx, query, 10)
+	matchedDocs, err := c.s.SimilaritySearch(ctx, query, 1000)
 	if err != nil {
 		return nil, fmt.Errorf("querying vectorstore: %w", err)
 	}

@@ -33,3 +33,19 @@ func GetBedrockEmbeddingModel() string {
 func GetBedrockRegion() string {
 	return viper.GetString(BedrockRegionProp.Key)
 }
+
+func GetBedrockInferenceTemperature() float64 {
+	return viper.GetFloat64(BedrockInferenceTemperatureProp.Key)
+}
+
+func GetBedrockInferenceMaxIterations() int {
+	return viper.GetInt(BedrockInferenceMaxIterationsProp.Key)
+}
+
+func GetBedrockInferenceTopK() int {
+	return viper.GetInt(BedrockInferenceTopKProp.Key)
+}
+
+func GetBedrockInferenceTopP() float64 {
+	return viper.GetFloat64(BedrockInferenceTopPProp.Key)
+}

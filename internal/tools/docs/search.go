@@ -30,7 +30,7 @@ func (s Search) Description() string {
 }
 
 func (s Search) Call(ctx context.Context, input string) (string, error) {
-	docs, err := s.s.SimilaritySearch(ctx, input, 10)
+	docs, err := s.s.SimilaritySearch(ctx, input, 100)
 	if err != nil {
 		return "", err
 	}
