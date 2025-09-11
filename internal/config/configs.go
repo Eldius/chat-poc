@@ -1,6 +1,10 @@
 package config
 
-import "github.com/spf13/viper"
+import (
+	"time"
+
+	"github.com/spf13/viper"
+)
 
 func GetDBUser() string {
 	return viper.GetString(DBUserPropKey)
@@ -48,4 +52,12 @@ func GetBedrockInferenceTopK() int {
 
 func GetBedrockInferenceTopP() float64 {
 	return viper.GetFloat64(BedrockInferenceTopPProp.Key)
+}
+
+func GetBedrockCacheEnabled() bool {
+	return viper.GetBool(BedrockCacheEnabledProp.Key)
+}
+
+func GetBedrockCachePersistTimeout() time.Duration {
+	return viper.GetDuration(BedrockCachePersistTimeoutProp.Key)
 }

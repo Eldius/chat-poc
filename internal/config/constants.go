@@ -22,4 +22,6 @@ var (
 	BedrockInferenceMaxIterationsProp setup.Prop = setup.Prop{Key: "bedrock.inference.chain.max_iterations", Value: 5}
 	BedrockInferenceTopKProp          setup.Prop = setup.Prop{Key: "bedrock.inference.top_k", Value: 5}
 	BedrockInferenceTopPProp          setup.Prop = setup.Prop{Key: "bedrock.inference.top_p", Value: 0.95}
+	BedrockCacheEnabledProp           setup.Prop = setup.Prop{Key: "bedrock.inference.cache.enabled", Value: false}
+	BedrockCachePersistTimeoutProp    setup.Prop = setup.Prop{Key: "bedrock.inference.cache.timeout", Value: "15s"}
 )

@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"chat-poc/internal/cache"
 	"chat-poc/internal/config"
 	"chat-poc/internal/tools/docs"
 	"chat-poc/internal/tools/transaction"
@@ -24,12 +25,14 @@ import (
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tmc/langchaingo/agents"
+	"github.com/tmc/langchaingo/callbacks"
 	"github.com/tmc/langchaingo/chains"
 	"github.com/tmc/langchaingo/documentloaders"
 	"github.com/tmc/langchaingo/embeddings"
 	bedrockEmb "github.com/tmc/langchaingo/embeddings/bedrock"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/bedrock"
+	lcgCache "github.com/tmc/langchaingo/llms/cache"
 	"github.com/tmc/langchaingo/memory"
 	"github.com/tmc/langchaingo/memory/sqlite3"
 	"github.com/tmc/langchaingo/schema"
@@ -43,6 +46,8 @@ type Conversation struct {
 	emm        embeddings.Embedder
 	s          vectorstores.VectorStore
 	generation GenerationOpts
+	cacheDB    *cache.BoltDBBackend
+	handler    callbacks.Handler
 }
 
 type GenerationOpts struct {
@@ -65,10 +70,11 @@ func NewDefaultConversation() (*Conversation, error) {
 
 	// Create a Bedrock Runtime client using the configured SDK
 	bedrockClient := bedrockruntime.NewFromConfig(cfg)
+	handler := newHandler()
 	m, err := bedrock.New(
 		bedrock.WithModel(config.GetBedrockInferenceModel()),
 		bedrock.WithClient(bedrockClient),
-		bedrock.WithCallback(newHandler()),
+		bedrock.WithCallback(handler),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating bedrock model: %w", err)
@@ -86,9 +92,25 @@ func NewDefaultConversation() (*Conversation, error) {
 		return nil, fmt.Errorf("creating chromem storage: %w", err)
 	}
 
+	db, err := cache.GetDB(".db/cache.db")
+	if err != nil {
+		return nil, fmt.Errorf("opening cache db: %w", err)
+	}
+
+	c := cache.NewBoltDBBackend(db)
+
+	var infM llms.Model = m
+	fmt.Println("model response cache enabled:", config.GetBedrockCacheEnabled())
+	if config.GetBedrockCacheEnabled() {
+		fmt.Println("Using cache")
+		infM = lcgCache.New(m, c)
+	}
+
 	return &Conversation{
-		m: m,
-		s: s,
+		m:       infM,
+		s:       s,
+		cacheDB: c,
+		handler: handler,
 		generation: GenerationOpts{
 			temp:          config.GetBedrockInferenceTemperature(),
 			maxIterations: config.GetBedrockInferenceMaxIterations(),
@@ -127,12 +149,12 @@ func (c *Conversation) Chat(ctx context.Context, session string) error {
 		agentTools,
 		agents.WithMaxIterations(c.generation.maxIterations),
 		agents.WithMemory(conversationBuffer),
-		agents.WithCallbacksHandler(newHandler()),
+		agents.WithCallbacksHandler(c.handler),
 		agents.WithReturnIntermediateSteps(),
 	)
 	executor := agents.NewExecutor(
 		agent,
-		agents.WithCallbacksHandler(newHandler()),
+		agents.WithCallbacksHandler(c.handler),
 		agents.WithReturnIntermediateSteps(),
 		agents.WithMaxIterations(c.generation.maxIterations),
 		//agents.WithPrompt()
@@ -146,7 +168,7 @@ func (c *Conversation) Chat(ctx context.Context, session string) error {
 			ctx,
 			executor,
 			userInput,
-			chains.WithCallback(newHandler()),
+			chains.WithCallback(c.handler),
 			chains.WithTemperature(c.generation.temp),
 			chains.WithTopK(c.generation.topK),
 			chains.WithTopP(c.generation.topP),
@@ -162,6 +184,7 @@ func (c *Conversation) Chat(ctx context.Context, session string) error {
 		slog.With("error", err, "stack_trace", stackTrace).Error("chat app has panicked")
 		return err
 	}
+	_ = c.cacheDB.Close()
 	return nil
 }
 
@@ -236,4 +259,8 @@ func (c *Conversation) QueryDocuments(ctx context.Context, query string) ([]sche
 		return nil, fmt.Errorf("querying vectorstore: %w", err)
 	}
 	return matchedDocs, nil
+}
+
+func (c *Conversation) ListCache(ctx context.Context) error {
+	return c.cacheDB.List(ctx)
 }
