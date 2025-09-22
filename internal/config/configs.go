@@ -61,3 +61,7 @@ func GetBedrockCacheEnabled() bool {
 func GetBedrockCachePersistTimeout() time.Duration {
 	return viper.GetDuration(BedrockCachePersistTimeoutProp.Key)
 }
+
+func GetCacheDBPath() string {
+	return viper.GetString(CacheDBPathProp.Key)
+}

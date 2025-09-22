@@ -24,4 +24,6 @@ var (
 	BedrockInferenceTopPProp          setup.Prop = setup.Prop{Key: "bedrock.inference.top_p", Value: 0.95}
 	BedrockCacheEnabledProp           setup.Prop = setup.Prop{Key: "bedrock.inference.cache.enabled", Value: false}
 	BedrockCachePersistTimeoutProp    setup.Prop = setup.Prop{Key: "bedrock.inference.cache.timeout", Value: "15s"}
+
+	CacheDBPathProp setup.Prop = setup.Prop{Key: "cache.path", Value: ".db/cache.db"}
 )

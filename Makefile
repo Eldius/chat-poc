@@ -29,3 +29,6 @@ doc-add:
 		--path "https://paymentcloudinc.com/blog/credit-card-decline-codes/"
 doc-query:
 	go run ./cmd/cli/ doc query ABECS code
+
+snapshot:
+	goreleaser release --snapshot --clean

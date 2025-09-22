@@ -92,7 +92,7 @@ func NewDefaultConversation() (*Conversation, error) {
 		return nil, fmt.Errorf("creating chromem storage: %w", err)
 	}
 
-	db, err := cache.GetDB(".db/cache.db")
+	db, err := cache.GetDB(config.GetCacheDBPath())
 	if err != nil {
 		return nil, fmt.Errorf("opening cache db: %w", err)
 	}

@@ -42,6 +42,7 @@ to quickly create a Cobra application.`,
 			config.BedrockInferenceTopPProp,
 			config.BedrockCacheEnabledProp,
 			config.BedrockCachePersistTimeoutProp,
+			config.CacheDBPathProp,
 		),
 		setup.WithOpenTelemetryOptions(
 			telemetry.WithOtelEnabled(false),
