@@ -13,13 +13,8 @@ import (
 // chatCmd represents the chat command
 var chatCmd = &cobra.Command{
 	Use:   "chat",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Opens a chat session with the LLM",
+	Long:  `Opens a chat session with the LLM.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := service.NewDefaultConversation()
 		if err != nil {
@@ -41,5 +36,5 @@ var (
 
 func init() {
 	rootCmd.AddCommand(chatCmd)
-	chatCmd.Flags().StringVarP(&chatCmdOpts.session, "session", "s", uuid.NewString(), "Session ID")
+	chatCmd.Flags().StringVarP(&chatCmdOpts.session, "session", "s", uuid.NewString(), "Session ID (defaults to a random UUID)")
 }
