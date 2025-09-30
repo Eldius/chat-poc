@@ -15,7 +15,7 @@ var cacheLsCmd = &cobra.Command{
 	Short: "Lists all the cached data",
 	Long:  `Lists all the cached data.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		c, err := service.NewDefaultConversation()
+		c, err := service.NewDefaultConversation(cmd.Context())
 		if err != nil {
 			panic(err)
 		}

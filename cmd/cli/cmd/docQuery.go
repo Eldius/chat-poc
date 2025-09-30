@@ -17,7 +17,7 @@ var docQueryCmd = &cobra.Command{
 	Short: "Similarity query for documents",
 	Long:  `Similarity query for documents.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		c, err := service.NewDefaultConversation()
+		c, err := service.NewDefaultConversation(cmd.Context())
 		if err != nil {
 			fmt.Println("Failed to create conversation:", err)
 			panic(err)

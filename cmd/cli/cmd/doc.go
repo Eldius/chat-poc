@@ -4,8 +4,6 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -14,9 +12,6 @@ var docCmd = &cobra.Command{
 	Use:   "doc",
 	Short: "Documents related subcommands",
 	Long:  `Documents related subcommands.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("doc called")
-	},
 }
 
 func init() {

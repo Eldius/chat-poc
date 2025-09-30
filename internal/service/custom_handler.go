@@ -17,7 +17,7 @@ type customHandler struct {
 	l *slog.Logger
 }
 
-func newHandler() callbacks.Handler {
+func NewCallbackHandler() callbacks.Handler {
 	return &customHandler{l: slog.With("pkg", "mcp")}
 }
 

@@ -16,7 +16,7 @@ var chatCmd = &cobra.Command{
 	Short: "Opens a chat session with the LLM",
 	Long:  `Opens a chat session with the LLM.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c, err := service.NewDefaultConversation()
+		c, err := service.NewDefaultConversation(cmd.Context())
 		if err != nil {
 			return err
 		}

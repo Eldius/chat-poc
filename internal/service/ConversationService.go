@@ -41,7 +41,7 @@ import (
 	"github.com/tmc/langchaingo/vectorstores"
 )
 
-type Conversation struct {
+type ConversationService struct {
 	m          llms.Model
 	emm        embeddings.Embedder
 	s          vectorstores.VectorStore
@@ -57,33 +57,47 @@ type GenerationOpts struct {
 	topP          float64
 }
 
-func NewDefaultConversation() (*Conversation, error) {
-
+func NewBedrockRuntimeClient(ctx context.Context) (*bedrockruntime.Client, error) {
 	cfg, err := awsConfig.LoadDefaultConfig(
-		context.Background(),
+		ctx,
 		awsConfig.WithHTTPClient(httpclient.NewHTTPClient()),
 		awsConfig.WithRegion(config.GetBedrockRegion()),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("loading AWS config: %w", err)
 	}
+	return bedrockruntime.NewFromConfig(cfg), nil
+}
 
-	// Create a Bedrock Runtime client using the configured SDK
-	bedrockClient := bedrockruntime.NewFromConfig(cfg)
-	handler := newHandler()
-	m, err := bedrock.New(
-		bedrock.WithModel(config.GetBedrockInferenceModel()),
+func NewInferenceModel(_ context.Context, bedrockClient *bedrockruntime.Client, h callbacks.Handler, modelName string) (llms.Model, error) {
+	return bedrock.New(
+		bedrock.WithModel(modelName),
 		bedrock.WithClient(bedrockClient),
-		bedrock.WithCallback(handler),
+		bedrock.WithCallback(h),
 	)
+}
+
+func NewEmbeddingsModel(_ context.Context, bedrockClient *bedrockruntime.Client, h callbacks.Handler, modelName string) (*bedrockEmb.Bedrock, error) {
+	return bedrockEmb.NewBedrock(
+		bedrockEmb.WithModel(config.GetBedrockEmbeddingModel()),
+		bedrockEmb.WithClient(bedrockClient),
+	)
+}
+
+func NewDefaultConversation(ctx context.Context) (*ConversationService, error) {
+
+	bedrockClient, err := NewBedrockRuntimeClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("creating Bedrock client: %w", err)
+	}
+
+	handler := NewCallbackHandler()
+	m, err := NewInferenceModel(ctx, bedrockClient, handler, config.GetBedrockInferenceModel())
 	if err != nil {
 		return nil, fmt.Errorf("creating bedrock model: %w", err)
 	}
 
-	emm, err := bedrockEmb.NewBedrock(
-		bedrockEmb.WithModel(config.GetBedrockEmbeddingModel()),
-		bedrockEmb.WithClient(bedrockClient),
-	)
+	emm, err := NewEmbeddingsModel(ctx, bedrockClient, handler, config.GetBedrockEmbeddingModel())
 	if err != nil {
 		return nil, fmt.Errorf("creating bedrock embeddings: %w", err)
 	}
@@ -106,7 +120,7 @@ func NewDefaultConversation() (*Conversation, error) {
 		infM = lcgCache.New(m, c)
 	}
 
-	return &Conversation{
+	return &ConversationService{
 		m:       infM,
 		s:       s,
 		cacheDB: c,
@@ -120,7 +134,7 @@ func NewDefaultConversation() (*Conversation, error) {
 	}, nil
 }
 
-func (c *Conversation) Chat(ctx context.Context, session string) error {
+func (c *ConversationService) Chat(ctx context.Context, session string) error {
 
 	db, err := sql.Open("sqlite3", ".db/chat.db")
 	if err != nil {
@@ -188,7 +202,7 @@ func (c *Conversation) Chat(ctx context.Context, session string) error {
 	return nil
 }
 
-func (c *Conversation) AddDocument(ctx context.Context, documentPaths []string) error {
+func (c *ConversationService) AddDocument(ctx context.Context, documentPaths []string) error {
 	log := logs.NewLogger(ctx)
 	var parsedDocuments []schema.Document
 	for _, path := range documentPaths {
@@ -253,7 +267,7 @@ func parserDoc(ctx context.Context, reader io.Reader) ([]schema.Document, string
 	return nil, "", nil
 }
 
-func (c *Conversation) QueryDocuments(ctx context.Context, query string) ([]schema.Document, error) {
+func (c *ConversationService) QueryDocuments(ctx context.Context, query string) ([]schema.Document, error) {
 	matchedDocs, err := c.s.SimilaritySearch(ctx, query, 1000)
 	if err != nil {
 		return nil, fmt.Errorf("querying vectorstore: %w", err)
@@ -261,6 +275,6 @@ func (c *Conversation) QueryDocuments(ctx context.Context, query string) ([]sche
 	return matchedDocs, nil
 }
 
-func (c *Conversation) ListCache(ctx context.Context) error {
+func (c *ConversationService) ListCache(ctx context.Context) error {
 	return c.cacheDB.List(ctx)
 }

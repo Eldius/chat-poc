@@ -16,7 +16,7 @@ var docAddCmd = &cobra.Command{
 	Short: "Adds a new document to the database",
 	Long:  `Adds a new document to the database.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		c, err := service.NewDefaultConversation()
+		c, err := service.NewDefaultConversation(cmd.Context())
 		if err != nil {
 			fmt.Println("Failed to create conversation:", err)
 			panic(err)
