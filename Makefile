@@ -32,3 +32,6 @@ doc-query:
 
 snapshot:
 	goreleaser release --snapshot --clean
+
+cache-ls:
+	go run ./cmd/cli/ cache ls
