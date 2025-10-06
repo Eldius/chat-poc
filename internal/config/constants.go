@@ -26,4 +26,6 @@ var (
 	BedrockCachePersistTimeoutProp    setup.Prop = setup.Prop{Key: "bedrock.inference.cache.timeout", Value: "15s"}
 
 	CacheDBPathProp setup.Prop = setup.Prop{Key: "cache.path", Value: ".db/cache.db"}
+
+	APIPortProp = setup.Prop{Key: "api.port", Value: "8080"}
 )

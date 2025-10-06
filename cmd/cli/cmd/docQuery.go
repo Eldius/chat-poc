@@ -1,6 +1,3 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -17,7 +14,7 @@ var docQueryCmd = &cobra.Command{
 	Short: "Similarity query for documents",
 	Long:  `Similarity query for documents.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		c, err := service.NewDefaultConversation(cmd.Context())
+		c, err := service.NewConversation(cmd.Context())
 		if err != nil {
 			fmt.Println("Failed to create conversation:", err)
 			panic(err)

@@ -1,9 +1,7 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
+	"chat-poc/internal/client"
 	"chat-poc/internal/service"
 
 	"github.com/google/uuid"
@@ -16,11 +14,11 @@ var chatCmd = &cobra.Command{
 	Short: "Opens a chat session with the LLM",
 	Long:  `Opens a chat session with the LLM.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c, err := service.NewDefaultConversation(cmd.Context())
+		c, err := service.NewConversation(cmd.Context(), client.WithChatMemorySession(chatCmdOpts.session))
 		if err != nil {
 			return err
 		}
-		if err := c.Chat(cmd.Context(), chatCmdOpts.session); err != nil {
+		if err := c.Chat(cmd.Context()); err != nil {
 			return err
 		}
 

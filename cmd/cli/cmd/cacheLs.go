@@ -1,6 +1,3 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -15,7 +12,7 @@ var cacheLsCmd = &cobra.Command{
 	Short: "Lists all the cached data",
 	Long:  `Lists all the cached data.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		c, err := service.NewDefaultConversation(cmd.Context())
+		c, err := service.NewConversation(cmd.Context())
 		if err != nil {
 			panic(err)
 		}

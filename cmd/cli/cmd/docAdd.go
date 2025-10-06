@@ -1,6 +1,3 @@
-/*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -16,7 +13,7 @@ var docAddCmd = &cobra.Command{
 	Short: "Adds a new document to the database",
 	Long:  `Adds a new document to the database.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		c, err := service.NewDefaultConversation(cmd.Context())
+		c, err := service.NewConversation(cmd.Context())
 		if err != nil {
 			fmt.Println("Failed to create conversation:", err)
 			panic(err)
