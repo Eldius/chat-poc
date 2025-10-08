@@ -36,8 +36,9 @@ var rootCmd = &cobra.Command{
 			config.BedrockInferenceTopPProp,
 			config.BedrockCacheEnabledProp,
 			config.BedrockCachePersistTimeoutProp,
-			config.CacheDBPathProp,
+			config.BedrockCacheDBPathProp,
 			config.APIPortProp,
+			config.BedrockChatMemoryDBPathProp,
 		),
 		setup.WithOpenTelemetryOptions(
 			telemetry.WithOtelEnabled(false),

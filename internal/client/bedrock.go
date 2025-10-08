@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
@@ -195,6 +197,7 @@ func NewBedrockClient(ctx context.Context, options ...BedrockOption) (*Bedrock, 
 	fmt.Println("model response cache enabled:", config.GetBedrockCacheEnabled())
 	if opts.generationCacheEnabled {
 		fmt.Println("Using cache")
+		_ = os.MkdirAll(filepath.Dir(config.GetCacheDBPath()), 0755)
 		dbFile, err := cache.GetDB(config.GetCacheDBPath())
 		if err != nil {
 			return nil, fmt.Errorf("opening cache db: %w", err)
@@ -204,14 +207,18 @@ func NewBedrockClient(ctx context.Context, options ...BedrockOption) (*Bedrock, 
 		infM = lcgCache.New(m, cacheDB)
 	}
 
-	chatDB, err := sql.Open("sqlite3", ".cacheDB/chat.cacheDB")
+	_ = os.MkdirAll(filepath.Dir(config.GetChatMemoryDBPath()), 0755)
+	chatDB, err := sql.Open("sqlite3", config.GetChatMemoryDBPath())
 	if err != nil {
 		return nil, fmt.Errorf("opening sqlite3 cacheDB: %w", err)
 	}
 
 	var conversationBuffer *memory.ConversationBuffer
 	if opts.chatMemorySession != "" {
-		chatHistory := sqlite3.NewSqliteChatMessageHistory(sqlite3.WithDB(chatDB), sqlite3.WithSession(opts.chatMemorySession), sqlite3.WithContext(ctx))
+		chatHistory := sqlite3.NewSqliteChatMessageHistory(
+			sqlite3.WithDB(chatDB),
+			sqlite3.WithSession(opts.chatMemorySession),
+			sqlite3.WithContext(ctx))
 		conversationBuffer = memory.NewConversationBuffer(memory.WithChatHistory(chatHistory))
 
 	}

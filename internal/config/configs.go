@@ -63,9 +63,13 @@ func GetBedrockCachePersistTimeout() time.Duration {
 }
 
 func GetCacheDBPath() string {
-	return viper.GetString(CacheDBPathProp.Key)
+	return viper.GetString(BedrockCacheDBPathProp.Key)
 }
 
 func GetAPIPort() string {
 	return viper.GetString(APIPortProp.Key)
+}
+
+func GetChatMemoryDBPath() string {
+	return viper.GetString(BedrockChatMemoryDBPathProp.Key)
 }
