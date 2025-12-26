@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"chat-poc/internal/client"
+	"chat-poc/internal/client/bedrock"
 	"chat-poc/internal/service"
 
 	"github.com/google/uuid"
@@ -14,7 +14,7 @@ var chatCmd = &cobra.Command{
 	Short: "Opens a chat session with the LLM",
 	Long:  `Opens a chat session with the LLM.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c, err := service.NewConversation(cmd.Context(), client.WithChatMemorySession(chatCmdOpts.session))
+		c, err := service.NewConversation(cmd.Context(), bedrock.WithChatMemorySession(chatCmdOpts.session))
 		if err != nil {
 			return err
 		}

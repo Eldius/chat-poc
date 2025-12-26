@@ -1,7 +1,7 @@
 package service
 
 import (
-	"chat-poc/internal/client"
+	"chat-poc/internal/client/bedrock"
 	"chat-poc/internal/tui/chat"
 	"context"
 	"fmt"
@@ -14,7 +14,7 @@ import (
 )
 
 type ConversationService struct {
-	c *client.Bedrock
+	c *bedrock.Bedrock
 }
 
 type GenerationOpts struct {
@@ -24,8 +24,8 @@ type GenerationOpts struct {
 	topP          float64
 }
 
-func NewConversation(ctx context.Context, genOpts ...client.BedrockOption) (*ConversationService, error) {
-	c, err := client.NewBedrockClient(ctx, genOpts...)
+func NewConversation(ctx context.Context, genOpts ...bedrock.BedrockOption) (*ConversationService, error) {
+	c, err := bedrock.NewBedrockClient(ctx, genOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("creating bedrock client: %w", err)
 	}

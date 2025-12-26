@@ -1,8 +1,9 @@
-package client
+package bedrock
 
 import (
 	"bytes"
 	"chat-poc/internal/cache"
+	"chat-poc/internal/client"
 	"chat-poc/internal/config"
 	"chat-poc/internal/tools/docs"
 	"chat-poc/internal/tools/transaction"
@@ -178,7 +179,7 @@ func NewBedrockClient(ctx context.Context, options ...BedrockOption) (*Bedrock, 
 		return nil, fmt.Errorf("creating Bedrock client: %w", err)
 	}
 
-	handler := NewCallbackHandler()
+	handler := client.NewCallbackHandler()
 	m, err := NewInferenceModel(ctx, bedrockClient, handler, opts.inferenceModel)
 	if err != nil {
 		return nil, fmt.Errorf("creating bedrock model: %w", err)

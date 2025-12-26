@@ -15,3 +15,11 @@ bedrock:
       timeout: 15s
   embedding:
     model: amazon.titan-embed-text-v1
+confluence:
+  base_url: "https://confluence.atlassian.com"
+  client_id: "e55dfd09-83c5-490e-b9ce-3a68ed016463"
+  auth:
+    redirect_url: "http://localhost:9999/auth/result"
+    url: "https://auth.atlassian.com/authorize"
+    response_type: "code"
+    audience: "api.atlassian.com"

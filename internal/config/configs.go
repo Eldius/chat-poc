@@ -73,3 +73,43 @@ func GetAPIPort() string {
 func GetChatMemoryDBPath() string {
 	return viper.GetString(BedrockChatMemoryDBPathProp.Key)
 }
+
+func GetConfluenceAuthRedirectURL() string {
+	return viper.GetString(ConfluenceAuthRedirectURLProp.Key)
+}
+
+func GetConfluenceAuthURL() string {
+	return viper.GetString(ConfluenceAuthURLProp.Key)
+}
+
+func GetConfluenceAuthResponseType() string {
+	return viper.GetString(ConfluenceAuthResponseTypeProp.Key)
+}
+
+func GetConfluenceBaseURL() string {
+	return viper.GetString(ConfluenceBaseURLProp.Key)
+}
+
+func GetConfluenceClientID() string {
+	return viper.GetString(ConfluenceClientIDProp.Key)
+}
+
+func GetConfluenceScopes() []string {
+	return viper.GetStringSlice(ConfluenceScopesProp.Key)
+}
+
+func GetConfluenceAuthAudience() string {
+	return viper.GetString(ConfluenceAuthAudienceProp.Key)
+}
+
+func GetConfluenceAuthPrompt() string {
+	return viper.GetString(ConfluenceAuthPromptProp.Key)
+}
+
+func GetConfluenceAuthRefreshTokenURL() string {
+	return viper.GetString(ConfluenceAuthRefreshTokenURLProp.Key)
+}
+
+func GetConfluenceClientSecret() string {
+	return viper.GetString(ConfluenceClientSecretProp.Key)
+}
