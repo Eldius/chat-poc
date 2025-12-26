@@ -329,7 +329,7 @@ type APIRateLimitsInfo struct {
 	NearLimit bool
 
 	// Reason
-	// RateLimit-Reason	The reason for throttling:
+	// RateLimit Reason: The reason for throttling:
 	// • confluence-quota-global-based – Global Pool limits breached
 	// • confluence-quota-tenant-based – Per-Tenant Pool limits breached
 	Reason string
