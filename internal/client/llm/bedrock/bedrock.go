@@ -3,7 +3,7 @@ package bedrock
 import (
 	"bytes"
 	"chat-poc/internal/cache"
-	"chat-poc/internal/client"
+	"chat-poc/internal/client/llm"
 	"chat-poc/internal/config"
 	"chat-poc/internal/tools/docs"
 	"chat-poc/internal/tools/transaction"
@@ -18,7 +18,7 @@ import (
 
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
-	"github.com/eldius/initial-config-go/httpclient"
+	httpclient "github.com/eldius/initial-config-go/http/client"
 	"github.com/eldius/initial-config-go/logs"
 	"github.com/eldius/langchaingo-chromem-vectorstor/vectorstor/chromem"
 	"github.com/tmc/langchaingo/agents"
@@ -166,7 +166,7 @@ func newDefaultOpts() BedrockConfigs {
 // Returns:
 //   - *Bedrock: Fully configured Bedrock client
 //   - error: Any error encountered during initialization
-func NewBedrockClient(ctx context.Context, options ...BedrockOption) (*Bedrock, error) {
+func NewBedrockClient(ctx context.Context, options ...BedrockOption) (llm.Backend, error) {
 
 	opts := newDefaultOpts()
 
@@ -179,7 +179,10 @@ func NewBedrockClient(ctx context.Context, options ...BedrockOption) (*Bedrock, 
 		return nil, fmt.Errorf("creating Bedrock client: %w", err)
 	}
 
-	handler := client.NewCallbackHandler()
+	handler, err := llm.NewHandler("bedrock")
+	if err != nil {
+		return nil, fmt.Errorf("creating handler: %w", err)
+	}
 	m, err := NewInferenceModel(ctx, bedrockClient, handler, opts.inferenceModel)
 	if err != nil {
 		return nil, fmt.Errorf("creating bedrock model: %w", err)
@@ -359,6 +362,24 @@ func (b *Bedrock) ChatCallback() func(ctx context.Context, userInput string) (st
 	}
 }
 
+func (o *Bedrock) Ask(ctx context.Context, msgs []llms.MessageContent) (string, error) {
+	log := logs.NewLogger(ctx, logs.KeyValueData{
+		"llm_backend": "ollama",
+		"messages":    msgs,
+		"tools":       "false",
+	})
+
+	log.Info("justAskStart")
+
+	reply, err := o.m.GenerateContent(ctx, msgs)
+	if err != nil {
+		err = fmt.Errorf("failed to generate content: %w", err)
+		log.WithError(err).Error("justAskFinish")
+		return "", err
+	}
+	return reply.Choices[0].Content, nil
+}
+
 // ListCache lists all entries in the response cache.
 // This is useful for debugging and understanding what responses have been cached.
 //
@@ -402,6 +423,10 @@ func (c *Bedrock) AskWithAgents(ctx context.Context, userInput string) (string, 
 	}).Debug("AskWithAgentsEnd")
 
 	return runResult, err
+}
+
+func (c *Bedrock) Name() string {
+	return "bedrock"
 }
 
 // WithCacheEnabled returns a BedrockOption that enables or disables response caching.

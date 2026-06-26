@@ -5,6 +5,9 @@ clear-log:
 testing:
 	go run ./cmd/testing/
 
+testing-v2:
+	go run ./cmd/testingv2/
+
 chat: clear-log
 	CHAT_DB_USER=$(DB_USER) \
 		CHAT_DB_PASS=$(DB_PASS) \

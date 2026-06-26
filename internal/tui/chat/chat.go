@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"chat-poc/internal/client/llm"
 	"context"
 	"fmt"
 	"os"
@@ -15,10 +16,6 @@ import (
 	"github.com/eldius/initial-config-go/logs"
 )
 
-// SendCallback define como processar uma mensagem enviada.
-// Você pode chamar uma API, IA, etc. Retorne a resposta para ser exibida.
-type SendCallback func(ctx context.Context, userInput string) (string, error)
-
 type sendResultMsg struct {
 	resp string
 	err  error
@@ -31,7 +28,7 @@ type chatModel struct {
 	spin       spinner.Model
 	messages   []string
 	processing bool
-	cb         SendCallback
+	cb         llm.ChatCallback
 
 	// Guarda a última mensagem enviada pelo usuário enquanto processa
 	pendingUser string
@@ -47,7 +44,7 @@ type chatModel struct {
 	assistantMsgsStyle lipgloss.Style
 }
 
-func NewChatModel(ctx context.Context, cb SendCallback) tea.Model {
+func NewChatModel(ctx context.Context, cb llm.ChatCallback) tea.Model {
 	in := textinput.New()
 	in.Placeholder = "Digite sua mensagem e pressione Enter..."
 	in.Focus()

@@ -17,16 +17,12 @@ var rootCmd = &cobra.Command{
 	Short: "A simple terminal AI chat application",
 	Long:  `A simple terminal AI chat application.`,
 	PersistentPreRunE: setup.PersistentPreRunE(
-		"my-chat-app-cli",
+		config.AppNameCli,
 		setup.WithConfigFileToBeUsed(cfgFile),
 		setup.WithDefaultCfgFileLocations("."),
 		setup.WithDefaultCfgFileName("config"),
 		setup.WithEnvPrefix("CHAT"),
-		setup.WithDefaultValues(map[string]any{
-			initCfg.LogLevelKey:      initCfg.LogLevelDEBUG,
-			initCfg.LogFormatKey:     initCfg.LogFormatJSON,
-			initCfg.LogOutputFileKey: "execution.log",
-		}),
+		setup.WithDefaultValues(initCfg.DefaultConfigValuesLogFileMap),
 		setup.WithProps(
 			config.BedrockRegionProp,
 			config.BedrockInferenceModelProp,

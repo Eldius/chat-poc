@@ -1,13 +1,14 @@
 package service
 
 import (
-	"chat-poc/internal/client/bedrock"
+	"chat-poc/internal/client/llm"
+	"chat-poc/internal/client/llm/bedrock"
 	"context"
 	"fmt"
 )
 
 type TransactionService struct {
-	c *bedrock.Bedrock
+	c llm.Backend
 }
 
 func NewTransactionService(ctx context.Context, opts ...bedrock.BedrockOption) (*TransactionService, error) {

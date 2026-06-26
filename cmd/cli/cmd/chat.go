@@ -1,9 +1,12 @@
 package cmd
 
 import (
-	"chat-poc/internal/client/bedrock"
-	"chat-poc/internal/service"
-
+	tea "charm.land/bubbletea/v2"
+	"chat-poc/internal/client/llm"
+	ollama2 "chat-poc/internal/client/llm/ollama"
+	chat "chat-poc/internal/tui/chatv2"
+	"context"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
@@ -14,12 +17,19 @@ var chatCmd = &cobra.Command{
 	Short: "Opens a chat session with the LLM",
 	Long:  `Opens a chat session with the LLM.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c, err := service.NewConversation(cmd.Context(), bedrock.WithChatMemorySession(chatCmdOpts.session))
+
+		opts, err := ollama2.LoadOllamaOpts()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to load Ollama options: %w", err)
 		}
-		if err := c.Chat(cmd.Context()); err != nil {
-			return err
+		backend, err := ollama2.NewOllamaBackend(&opts)
+		if err != nil {
+			return fmt.Errorf("failed to create Ollama backend: %w", err)
+		}
+
+		p := tea.NewProgram(chat.NewModel(context.Background(), llm.NewChatCallback(backend)))
+		if _, err := p.Run(); err != nil {
+			fmt.Println("Error running TUI:", err)
 		}
 
 		return nil

@@ -1,7 +1,8 @@
 package service
 
 import (
-	"chat-poc/internal/client/bedrock"
+	"chat-poc/internal/client/llm"
+	"chat-poc/internal/client/llm/bedrock"
 	"chat-poc/internal/tui/chat"
 	"context"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 )
 
 type ConversationService struct {
-	c *bedrock.Bedrock
+	c llm.Backend
 }
 
 type GenerationOpts struct {
@@ -36,7 +37,7 @@ func NewConversation(ctx context.Context, genOpts ...bedrock.BedrockOption) (*Co
 
 func (c *ConversationService) Chat(ctx context.Context) error {
 
-	p := tea.NewProgram(chat.NewChatModel(ctx, c.c.ChatCallback()), tea.WithAltScreen())
+	p := tea.NewProgram(chat.NewChatModel(ctx, llm.NewChatCallback(c.c)), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		err := fmt.Errorf("erro ao executar tui: %w", err)
 		fmt.Println("Stack Trace:")

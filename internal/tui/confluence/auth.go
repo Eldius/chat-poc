@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/eldius/initial-config-go/httpclient"
+	httpclient "github.com/eldius/initial-config-go/http/client"
 )
 
 func StartAuth(ctx context.Context) error {

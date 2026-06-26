@@ -3,7 +3,8 @@ package config
 import "github.com/eldius/initial-config-go/setup"
 
 const (
-	AppName = "chat-poc"
+	AppName    = "chat-poc"
+	AppNameCli = "chat-poc-cli"
 
 	DBPassPropKey = "db.pass"
 	DBUserPropKey = "db.user"
