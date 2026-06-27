@@ -192,7 +192,7 @@ func (m *myHandler) HandleRetrieverEnd(ctx context.Context, query string, docume
 		"handler":   "myHandler",
 		"query":     query,
 		"documents": documents,
-	})
+	}).Info("HandleRetrieverEnd")
 }
 
 func (m *myHandler) HandleStreamingFunc(ctx context.Context, chunk []byte) {

@@ -11,13 +11,6 @@ type ConversationService struct {
 	c llm.Backend
 }
 
-type GenerationOpts struct {
-	temp          float64
-	maxIterations int
-	topK          int
-	topP          float64
-}
-
 func NewConversation(backend llm.Backend) (*ConversationService, error) {
 	return &ConversationService{
 		c: backend,

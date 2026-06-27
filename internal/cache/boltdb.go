@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/cache"
@@ -17,7 +18,8 @@ var (
 )
 
 var (
-	dbMap = make(map[string]*bolt.DB)
+	dbMap   = make(map[string]*bolt.DB)
+	dbMapMu sync.RWMutex
 )
 
 type BoltDBBackend struct {
@@ -25,9 +27,20 @@ type BoltDBBackend struct {
 }
 
 func GetDB(path string) (*bolt.DB, error) {
+	dbMapMu.RLock()
+	db, ok := dbMap[path]
+	dbMapMu.RUnlock()
+	if ok {
+		return db, nil
+	}
+
+	dbMapMu.Lock()
+	defer dbMapMu.Unlock()
+
 	if db, ok := dbMap[path]; ok {
 		return db, nil
 	}
+
 	opts := bolt.DefaultOptions
 	opts.ReadOnly = false
 	opts.Timeout = config.GetBedrockCachePersistTimeout()

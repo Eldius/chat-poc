@@ -43,7 +43,6 @@ func NewOllamaBackend(opts *OllamaOpts, toolList ...tools.Tool) (llm.Backend, er
 		ollama.WithModel(opts.Generation.Model),
 		ollama.WithServerURL(opts.Endpoint),
 		ollama.WithThink(true),
-		ollama.WithThink(true),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Ollama backend: %w", err)
@@ -84,18 +83,15 @@ func NewOllamaBackend(opts *OllamaOpts, toolList ...tools.Tool) (llm.Backend, er
 }
 
 func (o *Backend) AddDocument(ctx context.Context, documentPaths []string) error {
-	//TODO implement me
-	panic("implement me")
+	return fmt.Errorf("AddDocument not implemented for ollama backend")
 }
 
 func (o *Backend) QueryDocuments(ctx context.Context, query string) ([]schema.Document, error) {
-	//TODO implement me
-	panic("implement me")
+	return nil, fmt.Errorf("QueryDocuments not implemented for ollama backend")
 }
 
 func (o *Backend) ListCache(ctx context.Context) error {
-	//TODO implement me
-	panic("implement me")
+	return fmt.Errorf("ListCache not implemented for ollama backend")
 }
 
 func (o *Backend) AskWithAgents(ctx context.Context, userInput string) (string, error) {
@@ -118,6 +114,9 @@ func (o *Backend) AskWithAgents(ctx context.Context, userInput string) (string, 
 		err = fmt.Errorf("failed to marshal messages: %w", err)
 		log.WithError(err).Error("AskQuestionStartFinish")
 		return "", err
+	}
+	if o.executor == nil {
+		return "", fmt.Errorf("executor not initialized (no tools provided)")
 	}
 	resp, err := chains.Run(ctx, o.executor, string(msgStr), chains.WithCallback(o.handler))
 	if err != nil {
@@ -148,32 +147,6 @@ func (o *Backend) Ask(ctx context.Context, msgs []llms.MessageContent) (string, 
 func (o *Backend) Name() string {
 	return "ollama"
 }
-
-func (o *Backend) justAsk(ctx context.Context, question string) (string, error) {
-	log := logs.NewLogger(ctx, logs.KeyValueData{
-		"llm_backend": "ollama",
-		"question":    question,
-		"tools":       "false",
-	})
-
-	log.Info("justAskStart")
-
-	msgs := []llms.MessageContent{{
-		Role: llms.ChatMessageTypeHuman,
-		Parts: []llms.ContentPart{
-			llms.TextPart(question),
-		},
-	}}
-
-	reply, err := o.llm.GenerateContent(ctx, msgs)
-	if err != nil {
-		err = fmt.Errorf("failed to generate content: %w", err)
-		log.WithError(err).Error("justAskFinish")
-		return "", err
-	}
-	return reply.Choices[0].Content, nil
-}
-
 func (o *Backend) AskQuestion(ctx context.Context, question string) (string, error) {
 	if len(o.toolList) < 1 {
 		return o.Ask(ctx, []llms.MessageContent{
