@@ -2,15 +2,8 @@ package service
 
 import (
 	"chat-poc/internal/client/llm"
-	"chat-poc/internal/client/llm/bedrock"
-	"chat-poc/internal/tui/chat"
+	"chat-poc/internal/tui/chatv2"
 	"context"
-	"fmt"
-	"log/slog"
-	"runtime/debug"
-
-	tea "github.com/charmbracelet/bubbletea"
-
 	"github.com/tmc/langchaingo/schema"
 )
 
@@ -25,28 +18,14 @@ type GenerationOpts struct {
 	topP          float64
 }
 
-func NewConversation(ctx context.Context, genOpts ...bedrock.BedrockOption) (*ConversationService, error) {
-	c, err := bedrock.NewBedrockClient(ctx, genOpts...)
-	if err != nil {
-		return nil, fmt.Errorf("creating bedrock client: %w", err)
-	}
+func NewConversation(backend llm.Backend) (*ConversationService, error) {
 	return &ConversationService{
-		c: c,
+		c: backend,
 	}, nil
 }
 
 func (c *ConversationService) Chat(ctx context.Context) error {
-
-	p := tea.NewProgram(chat.NewChatModel(ctx, llm.NewChatCallback(c.c)), tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		err := fmt.Errorf("erro ao executar tui: %w", err)
-		fmt.Println("Stack Trace:")
-		stackTrace := string(debug.Stack())
-		fmt.Println(stackTrace)
-		slog.With("error", err, "stack_trace", stackTrace).Error("chat app has panicked")
-		return err
-	}
-	return nil
+	return chatv2.ChatScreen(ctx)
 }
 
 func (c *ConversationService) AddDocument(ctx context.Context, documentPaths []string) error {

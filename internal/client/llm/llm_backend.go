@@ -56,3 +56,4 @@ func NewChatCallback(backend Backend) ChatCallback {
 
 	return cb
 }
+

@@ -37,12 +37,3 @@ ollama:
       max_documents: 5
       min_similarity_score: 0.9
       enable: false
-
-confluence:
-  base_url: "https://confluence.atlassian.com"
-  client_id: "e55dfd09-83c5-490e-b9ce-3a68ed016463"
-  auth:
-    redirect_url: "http://localhost:9999/auth/result"
-    url: "https://auth.atlassian.com/authorize"
-    response_type: "code"
-    audience: "api.atlassian.com"

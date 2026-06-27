@@ -5,9 +5,6 @@ clear-log:
 testing:
 	go run ./cmd/testing/
 
-testing-v2:
-	go run ./cmd/testingv2/
-
 chat: clear-log
 	CHAT_DB_USER=$(DB_USER) \
 		CHAT_DB_PASS=$(DB_PASS) \
@@ -38,3 +35,15 @@ snapshot:
 
 cache-ls:
 	go run ./cmd/cli/ cache ls
+
+test:
+	go test ./... -cover
+
+vulncheck:
+	go tool govulncheck ./...
+
+lint:
+	golangci-lint run
+
+validate: test lint vulncheck
+	@echo "Validation finished with success..."

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"chat-poc/internal/client/llm/ollama"
 	"chat-poc/internal/service"
 	"fmt"
 
@@ -12,16 +13,20 @@ var docAddCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Adds a new document to the database",
 	Long:  `Adds a new document to the database.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		c, err := service.NewConversation(cmd.Context())
+	RunE: func(cmd *cobra.Command, args []string) error {
+		opts, err := ollama.LoadOllamaOpts()
 		if err != nil {
-			fmt.Println("Failed to create conversation:", err)
-			panic(err)
+			return fmt.Errorf("loading ollama opts: %w", err)
 		}
-		if err := c.AddDocument(cmd.Context(), docAddCmdOpts.path); err != nil {
-			fmt.Println("Failed to add document:", err)
-			panic(err)
+		backend, err := ollama.NewOllamaBackend(&opts)
+		if err != nil {
+			return fmt.Errorf("creating backend: %w", err)
 		}
+		c, err := service.NewConversation(backend)
+		if err != nil {
+			return fmt.Errorf("creating conversation: %w", err)
+		}
+		return c.AddDocument(cmd.Context(), docAddCmdOpts.path)
 	},
 }
 

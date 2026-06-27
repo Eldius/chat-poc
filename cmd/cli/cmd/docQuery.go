@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"chat-poc/internal/client/llm/ollama"
 	"chat-poc/internal/service"
 	"fmt"
 	"strings"
@@ -13,23 +14,30 @@ var docQueryCmd = &cobra.Command{
 	Use:   "query",
 	Short: "Similarity query for documents",
 	Long:  `Similarity query for documents.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		c, err := service.NewConversation(cmd.Context())
+	RunE: func(cmd *cobra.Command, args []string) error {
+		opts, err := ollama.LoadOllamaOpts()
 		if err != nil {
-			fmt.Println("Failed to create conversation:", err)
-			panic(err)
+			return fmt.Errorf("loading ollama opts: %w", err)
+		}
+		backend, err := ollama.NewOllamaBackend(&opts)
+		if err != nil {
+			return fmt.Errorf("creating backend: %w", err)
+		}
+		c, err := service.NewConversation(backend)
+		if err != nil {
+			return fmt.Errorf("creating conversation: %w", err)
 		}
 
 		documents, err := c.QueryDocuments(cmd.Context(), strings.Join(args, " "))
 		if err != nil {
-			fmt.Println("Failed to query documents:", err)
-			panic(err)
+			return fmt.Errorf("querying documents: %w", err)
 		}
 
 		fmt.Println("Documents:")
 		for _, doc := range documents {
 			fmt.Println(" - ", doc.Metadata)
 		}
+		return nil
 	},
 }
 

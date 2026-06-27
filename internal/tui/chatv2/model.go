@@ -2,8 +2,10 @@ package chatv2
 
 import (
 	"chat-poc/internal/client/llm"
+	"chat-poc/internal/client/llm/ollama"
 	"context"
 	"fmt"
+	"github.com/eldius/initial-config-go/logs"
 	"strings"
 
 	"charm.land/bubbles/v2/spinner"
@@ -217,4 +219,24 @@ func (m *Model) runCallback(userText string) tea.Cmd {
 		resp, err := m.cb(m.ctx, userText)
 		return sendResultMsg{resp: resp, err: err}
 	}
+}
+
+func ChatScreen(ctx context.Context) error {
+	opts, err := ollama.LoadOllamaOpts()
+	if err != nil {
+		return fmt.Errorf("failed to load Ollama options: %w", err)
+	}
+	backend, err := ollama.NewOllamaBackend(&opts)
+	if err != nil {
+		return fmt.Errorf("failed to create Ollama backend: %w", err)
+	}
+
+	p := tea.NewProgram(NewModel(context.Background(), llm.NewChatCallback(backend)))
+	if _, err := p.Run(); err != nil {
+		err = fmt.Errorf("erro ao executar tui: %w", err)
+		logs.NewLogger(ctx).WithError(err).Error("chat app has panicked")
+		return err
+	}
+
+	return nil
 }

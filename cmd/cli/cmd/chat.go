@@ -1,11 +1,7 @@
 package cmd
 
 import (
-	tea "charm.land/bubbletea/v2"
-	"chat-poc/internal/client/llm"
-	ollama2 "chat-poc/internal/client/llm/ollama"
-	chat "chat-poc/internal/tui/chatv2"
-	"context"
+	"chat-poc/internal/tui/chatv2"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
@@ -18,18 +14,10 @@ var chatCmd = &cobra.Command{
 	Long:  `Opens a chat session with the LLM.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		opts, err := ollama2.LoadOllamaOpts()
-		if err != nil {
-			return fmt.Errorf("failed to load Ollama options: %w", err)
-		}
-		backend, err := ollama2.NewOllamaBackend(&opts)
-		if err != nil {
-			return fmt.Errorf("failed to create Ollama backend: %w", err)
-		}
-
-		p := tea.NewProgram(chat.NewModel(context.Background(), llm.NewChatCallback(backend)))
-		if _, err := p.Run(); err != nil {
-			fmt.Println("Error running TUI:", err)
+		if err := chatv2.ChatScreen(cmd.Context()); err != nil {
+			err = fmt.Errorf("failed to open chat screen: %w", err)
+			cmd.PrintErrln(err)
+			return err
 		}
 
 		return nil

@@ -27,7 +27,7 @@ Env prefix `CHAT`, config file `config.yaml` via `github.com/eldius/initial-conf
 ## Architecture
 
 Three entrypoints:
-- **`cmd/cli/`** - main app: cobra CLI with subcommands `chat`, `doc add/query`, `cache ls`, `confluence authenticate`
+- **`cmd/cli/`** - main app: cobra CLI with subcommands `chat`, `doc add/query`, `cache ls`
 - **`cmd/api/`** - HTTP API stub (not yet implemented; handler is empty)
 - **`cmd/testing/`** - TUI test harness (creates Bubble Tea v1 program with fake callback)
 - **`cmd/testingv2/`** - TUI test harness (creates Bubble Tea v2 program with fake callback, package `charm.land/bubbletea/v2`)
@@ -40,7 +40,6 @@ internal/
   cache/         - BoltDB backend for langchaingo cache
   client/
     bedrock/     - NewBedrockClient factory, options
-    confluence/  - OAuth2 client for Confluence
     custom_handler.go - slog-based langchaingo callback handler
   config/        - viper property defaults (constants.go), getters (configs.go)
   service/       - ConversationService, TransactionService facades
@@ -50,7 +49,6 @@ internal/
   tui/
     chat/        - Bubble Tea v1 chat model
     chatv2/      - Bubble Tea v2 chat model (newer, parallel implementation)
-    confluence/  - OAuth auth flow orchestrator
 ```
 
 ### LangChain tools
@@ -66,7 +64,6 @@ internal/
 |------|------|---------------------|
 | LLM response cache | `.db/cache.db` (BoltDB) | No (`cache.enabled: false` in config.yaml) |
 | Chat memory | `.db/chat.db` (SQLite) | Yes, when `--session` flag is passed |
-| Confluence OAuth session | `.db/session.json` | On successful auth |
 
 ## Config quirks
 
@@ -81,7 +78,6 @@ internal/
 
 Minimal coverage:
 - `internal/tui/chat/functions_test.go` - WordWrap unit tests (table-driven, testify/assert)
-- `internal/client/confluence/confluence_test.go` - URL parsing test
 
 No mocks, no integration tests, no test fixtures.
 

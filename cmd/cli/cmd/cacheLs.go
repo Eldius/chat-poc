@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"chat-poc/internal/client/llm/ollama"
 	"chat-poc/internal/service"
+	"fmt"
 
 	"github.com/spf13/cobra"
 )
@@ -11,12 +13,20 @@ var cacheLsCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "Lists all the cached data",
 	Long:  `Lists all the cached data.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		c, err := service.NewConversation(cmd.Context())
+	RunE: func(cmd *cobra.Command, args []string) error {
+		opts, err := ollama.LoadOllamaOpts()
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("loading ollama opts: %w", err)
 		}
-		_ = c.ListCache(cmd.Context())
+		backend, err := ollama.NewOllamaBackend(&opts)
+		if err != nil {
+			return fmt.Errorf("creating backend: %w", err)
+		}
+		c, err := service.NewConversation(backend)
+		if err != nil {
+			return fmt.Errorf("creating conversation: %w", err)
+		}
+		return c.ListCache(cmd.Context())
 	},
 }
 
