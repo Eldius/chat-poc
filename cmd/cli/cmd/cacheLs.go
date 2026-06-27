@@ -22,10 +22,7 @@ var cacheLsCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("creating backend: %w", err)
 		}
-		c, err := service.NewConversation(backend)
-		if err != nil {
-			return fmt.Errorf("creating conversation: %w", err)
-		}
+		c := service.NewConversation(backend)
 		return c.ListCache(cmd.Context())
 	},
 }

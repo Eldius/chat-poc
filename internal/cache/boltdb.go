@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"sync"
 
 	"github.com/tmc/langchaingo/llms"
@@ -58,36 +57,33 @@ func NewBoltDBBackend(db *bolt.DB) *BoltDBBackend {
 }
 
 func (b *BoltDBBackend) Get(ctx context.Context, key string) *llms.ContentResponse {
-	log := slog.With("pkg", "cache", "key", key)
-	log.Debug("BoltDBBackend.Get.Begin")
-	bucket, tx, err := b.getBucket(ctx, false)
+	tx, err := b.db.Begin(false)
 	if err != nil {
-		return nil
-	}
-	element := bucket.Get([]byte(key))
-	if element == nil {
 		return nil
 	}
 	defer func() {
 		_ = tx.Rollback()
 	}()
 
-	if err := tx.Commit(); err != nil {
+	bucket := tx.Bucket([]byte("response_cache"))
+	if bucket == nil {
 		return nil
 	}
+
+	element := bucket.Get([]byte(key))
+	if element == nil {
+		return nil
+	}
+
 	var response llms.ContentResponse
 	if err := json.Unmarshal(element, &response); err != nil {
 		return nil
 	}
 
-	log.With("response", response).Debug("BoltDBBackend.Get.End")
-
 	return &response
 }
 
 func (b *BoltDBBackend) Put(ctx context.Context, key string, response *llms.ContentResponse) {
-	log := slog.With("pkg", "cache", "key", key, "response", response)
-	log.Debug("BoltDBBackend.Put.Begin")
 	bucket, tx, err := b.getBucket(ctx, true)
 	if err != nil {
 		return
@@ -97,38 +93,35 @@ func (b *BoltDBBackend) Put(ctx context.Context, key string, response *llms.Cont
 	}()
 	element, _ := json.Marshal(response)
 	if err := bucket.Put([]byte(key), element); err != nil {
-		log.With("error", err).Error("BoltDBBackend.Put.Error")
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
-		log.With("error", err).Error("BoltDBBackend.Put.Error")
 		return
 	}
-	_ = b.db.Sync()
-	log.Debug("BoltDBBackend.Put.End")
+	if err := b.db.Sync(); err != nil {
+		return
+	}
 }
 
 func (b *BoltDBBackend) List(ctx context.Context) error {
-	log := slog.With("pkg", "cache")
-	log.Debug("BoltDBBackend.List.Begin")
-	bucket, tx, err := b.getBucket(ctx, false)
+	tx, err := b.db.Begin(false)
 	if err != nil {
-		log.With("error", err).Error("BoltDBBackend.List.Error")
 		return err
 	}
 	defer func() {
 		_ = tx.Rollback()
 	}()
+
+	bucket := tx.Bucket([]byte("response_cache"))
+	if bucket == nil {
+		return nil
+	}
+
 	cursor := bucket.Cursor()
 	for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 		fmt.Printf("- %s\n  %s\n", string(k), string(v))
-		//var response llms.ContentResponse
-		//if err := json.Unmarshal(v, &response); err != nil {
-		//	return err
-		//}
 	}
-	log.Debug("BoltDBBackend.List.End")
 
 	return nil
 }
@@ -140,6 +133,7 @@ func (b *BoltDBBackend) getBucket(_ context.Context, writable bool) (*bolt.Bucke
 	}
 	bucket, err := tx.CreateBucketIfNotExists([]byte("response_cache"))
 	if err != nil {
+		_ = tx.Rollback()
 		return nil, nil, err
 	}
 	return bucket, tx, nil

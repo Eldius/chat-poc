@@ -26,51 +26,6 @@ func GetDBName() string {
 	return viper.GetString(DBNamePropKey)
 }
 
-func GetBedrockInferenceModel() string {
-	return viper.GetString(BedrockInferenceModelProp.Key)
-}
-
-func GetBedrockEmbeddingModel() string {
-	return viper.GetString(BedrockEmbeddingModelProp.Key)
-}
-
-func GetBedrockRegion() string {
-	return viper.GetString(BedrockRegionProp.Key)
-}
-
-func GetBedrockInferenceTemperature() float64 {
-	return viper.GetFloat64(BedrockInferenceTemperatureProp.Key)
-}
-
-func GetBedrockInferenceMaxIterations() int {
-	return viper.GetInt(BedrockInferenceMaxIterationsProp.Key)
-}
-
-func GetBedrockInferenceTopK() int {
-	return viper.GetInt(BedrockInferenceTopKProp.Key)
-}
-
-func GetBedrockInferenceTopP() float64 {
-	return viper.GetFloat64(BedrockInferenceTopPProp.Key)
-}
-
-func GetBedrockCacheEnabled() bool {
-	return viper.GetBool(BedrockCacheEnabledProp.Key)
-}
-
 func GetBedrockCachePersistTimeout() time.Duration {
 	return viper.GetDuration(BedrockCachePersistTimeoutProp.Key)
 }
-
-func GetCacheDBPath() string {
-	return viper.GetString(BedrockCacheDBPathProp.Key)
-}
-
-func GetAPIPort() string {
-	return viper.GetString(APIPortProp.Key)
-}
-
-func GetChatMemoryDBPath() string {
-	return viper.GetString(BedrockChatMemoryDBPathProp.Key)
-}
-

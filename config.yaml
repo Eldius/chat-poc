@@ -3,27 +3,17 @@ telemetry:
   enabled: true
   debug: true
   traces:
-    endpoint: "192.168.0.152:4317"
+    endpoint: "localhost:4317"
   metrics:
-    endpoint: "192.168.0.152:4317"
+    endpoint: "localhost:4317"
   logs:
-    endpoint: "192.168.0.152:4317"
+    endpoint: "localhost:4317"
 db:
-  host: "vpn-dataplat.adapter.datalake.bemobi.com"
-  port: 5439
-  name: master
-bedrock:
-  region: us-east-1
-  inference:
-    model: anthropic.claude-3-haiku-20240307-v1:0
-    temperature: 0.7
-    cache:
-      enabled: false
-      timeout: 15s
-  embedding:
-    model: amazon.titan-embed-text-v1
+  host: "localhost"
+  port: 5432
+  name: postgres
 ollama:
-  endpoint: http://192.168.0.185:11434
+  endpoint: http://localhost:11434
   embedding:
     model: nomic-embed-text
     chunk_size: 2000

@@ -141,6 +141,9 @@ func (o *Backend) Ask(ctx context.Context, msgs []llms.MessageContent) (string, 
 		log.WithError(err).Error("justAskFinish")
 		return "", err
 	}
+	if len(reply.Choices) == 0 {
+		return "", fmt.Errorf("no content choices in LLM response")
+	}
 	return reply.Choices[0].Content, nil
 }
 

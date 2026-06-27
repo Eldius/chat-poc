@@ -14,6 +14,9 @@ var docAddCmd = &cobra.Command{
 	Short: "Adds a new document to the database",
 	Long:  `Adds a new document to the database.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(docAddCmdOpts.path) == 0 {
+			return fmt.Errorf("--path flag is required")
+		}
 		opts, err := ollama.LoadOllamaOpts()
 		if err != nil {
 			return fmt.Errorf("loading ollama opts: %w", err)
@@ -22,10 +25,7 @@ var docAddCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("creating backend: %w", err)
 		}
-		c, err := service.NewConversation(backend)
-		if err != nil {
-			return fmt.Errorf("creating conversation: %w", err)
-		}
+		c := service.NewConversation(backend)
 		return c.AddDocument(cmd.Context(), docAddCmdOpts.path)
 	},
 }

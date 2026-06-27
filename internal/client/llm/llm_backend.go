@@ -51,9 +51,8 @@ func NewChatCallback(backend Backend) ChatCallback {
 				llms.TextPart(reply),
 			},
 		})
-		return reply, err
+		return reply, nil
 	}
 
 	return cb
 }
-

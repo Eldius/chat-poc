@@ -27,5 +27,5 @@ var (
 	BedrockCachePersistTimeoutProp    setup.Prop = setup.Prop{Key: "bedrock.inference.cache.timeout", Value: "15s"}
 	BedrockCacheDBPathProp            setup.Prop = setup.Prop{Key: "cache.path", Value: ".db/cache.db"}
 	BedrockChatMemoryDBPathProp       setup.Prop = setup.Prop{Key: "bedrock.chat.memory.db_file", Value: ".db/chat.db"}
-	APIPortProp = setup.Prop{Key: "api.port", Value: "8080"}
+	APIPortProp                                  = setup.Prop{Key: "api.port", Value: "8080"}
 )

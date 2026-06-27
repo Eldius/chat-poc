@@ -233,7 +233,7 @@ func ChatScreen(ctx context.Context) error {
 
 	p := tea.NewProgram(NewModel(context.Background(), llm.NewChatCallback(backend)))
 	if _, err := p.Run(); err != nil {
-		err = fmt.Errorf("erro ao executar tui: %w", err)
+		err = fmt.Errorf("running tui: %w", err)
 		logs.NewLogger(ctx).WithError(err).Error("chat app has panicked")
 		return err
 	}

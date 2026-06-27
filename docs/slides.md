@@ -60,15 +60,13 @@ TOOLS:
 
 Assistant has access to the following tools:
 
-- transaction_lookup: <tool description>
-
 - documentation_search: <tool description>
 
 
 To use a tool, please use the following format:
 
 Thought: Do I need to use a tool? Yes
-Action: the action to take, should be one of [transaction_lookup, documentation_search
+Action: the action to take, should be one of [documentation_search
                     ]
 Action Input: the input to the action
 Observation: the result of the action

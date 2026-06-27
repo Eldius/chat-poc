@@ -2,7 +2,6 @@ package service
 
 import (
 	"chat-poc/internal/client/llm"
-	"chat-poc/internal/tui/chatv2"
 	"context"
 	"github.com/tmc/langchaingo/schema"
 )
@@ -11,14 +10,10 @@ type ConversationService struct {
 	c llm.Backend
 }
 
-func NewConversation(backend llm.Backend) (*ConversationService, error) {
+func NewConversation(backend llm.Backend) *ConversationService {
 	return &ConversationService{
 		c: backend,
-	}, nil
-}
-
-func (c *ConversationService) Chat(ctx context.Context) error {
-	return chatv2.ChatScreen(ctx)
+	}
 }
 
 func (c *ConversationService) AddDocument(ctx context.Context, documentPaths []string) error {

@@ -2,9 +2,6 @@
 clear-log:
 	-rm execution.log
 
-testing:
-	go run ./cmd/testing/
-
 chat: clear-log
 	CHAT_DB_USER=$(DB_USER) \
 		CHAT_DB_PASS=$(DB_PASS) \
@@ -12,7 +9,6 @@ chat: clear-log
 
 debug:
 	dlv debug --headless --listen=:40237 --api-version=2 --accept-multiclient ./cmd/cli/ -- chat --session "testing session"
-	#dlv debug --headless --listen=:40237 --api-version=2 --accept-multiclient ./cmd/testing/
 
 doc-add:
 	go run ./cmd/cli/ doc add \
