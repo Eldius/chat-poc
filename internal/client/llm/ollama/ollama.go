@@ -9,6 +9,7 @@ import (
 	"github.com/eldius/initial-config-go/http/client"
 	"github.com/eldius/initial-config-go/logs"
 	"github.com/eldius/initial-config-go/telemetry"
+	_ "github.com/glebarez/sqlite"
 	"github.com/tmc/langchaingo/agents"
 	"github.com/tmc/langchaingo/callbacks"
 	"github.com/tmc/langchaingo/chains"
@@ -38,7 +39,7 @@ func NewOllamaBackend(opts *OllamaOpts, toolList ...tools.Tool) (llm.Backend, er
 		return nil, fmt.Errorf("failed to create handler: %w", err)
 	}
 
-	llm, err := ollama.New(
+	m, err := ollama.New(
 		ollama.WithHTTPClient(client.NewHTTPClient()),
 		ollama.WithModel(opts.Generation.Model),
 		ollama.WithServerURL(opts.Endpoint),
@@ -61,19 +62,19 @@ func NewOllamaBackend(opts *OllamaOpts, toolList ...tools.Tool) (llm.Backend, er
 			sqlite3.WithSession("ollama_session"),
 		)
 
-		history = memory.NewConversationTokenBuffer(llm, 512, memory.WithMemoryKey("my-memory-key"), memory.WithChatHistory(chatHist))
+		history = memory.NewConversationTokenBuffer(m, 512, memory.WithMemoryKey("my-memory-key"), memory.WithChatHistory(chatHist))
 	}
 	var agent agents.Agent
 	var executor *agents.Executor
 
 	if len(toolList) > 0 {
-		agent = agents.NewOneShotAgent(llm, toolList, agents.WithMaxIterations(5), agents.WithCallbacksHandler(handler), agents.WithMemory(history))
+		agent = agents.NewOneShotAgent(m, toolList, agents.WithMaxIterations(5), agents.WithCallbacksHandler(handler), agents.WithMemory(history))
 		executor = agents.NewExecutor(agent, agents.WithMaxIterations(5), agents.WithCallbacksHandler(handler), agents.WithMemory(history))
 	}
 
 	return &Backend{
 		opts:     opts,
-		llm:      llm,
+		llm:      m,
 		agent:    agent,
 		executor: executor,
 		toolList: toolList,

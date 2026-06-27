@@ -3,17 +3,17 @@ telemetry:
   enabled: true
   debug: true
   traces:
-    endpoint: "localhost:4317"
+    endpoint: "192.168.0.152:4317"
   metrics:
-    endpoint: "localhost:4317"
+    endpoint: "192.168.0.152:4317"
   logs:
-    endpoint: "localhost:4317"
+    endpoint: "192.168.0.152:4317"
 db:
   host: "localhost"
   port: 5432
   name: postgres
 ollama:
-  endpoint: http://localhost:11434
+  endpoint: http://192.168.0.185:11434
   embedding:
     model: nomic-embed-text
     chunk_size: 2000
@@ -21,7 +21,7 @@ ollama:
   generation:
     model: llama3:8b-instruct-q4_K_M
     cache:
-      enabled: false
+      enabled: true
       similarity_threshold: 0.9
     context:
       max_documents: 5
