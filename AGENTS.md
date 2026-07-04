@@ -1,78 +1,65 @@
 # AGENTS.md - chat-poc
 
-## Build & Test
+## Build & Verify
 
 ```sh
-# No linter/typecheck configured. Only verify via:
 go build ./...
 go test ./...
+make validate       # test + golangci-lint + govulncheck
 ```
 
 Env prefix `CHAT`, config file `config.yaml` via `github.com/eldius/initial-config-go`.
 
-## Makefile targets
+## Makefile shortcuts
 
-| Command | Notes |
-|---------|-------|
-| `make chat` | Requires `DB_USER` / `DB_PASS` env vars. Runs `cmd/cli` with `chat` subcommand. |
-| `make debug` | `dlv debug --headless --listen=:40237` for `cmd/cli chat`. |
-| `make doc-add` | Ingests URLs into vector store. Edit paths in Makefile. |
-| `make doc-query` | Performs vector similarity search. |
-| `make cache-ls` | Lists BoltDB cache entries. |
-| `make snapshot` | GoReleaser snapshot build. |
-| `make clear-log` | Deletes `execution.log`. |
+| Target | Notes |
+|--------|-------|
+| `make chat` | Requires `DB_USER` / `DB_PASS` env vars. Runs `cmd/cli` `chat` subcommand. |
+| `make debug` | `dlv debug --headless --listen=:40237` for `cmd/cli chat --session <uuid>`. |
+| `make doc-add` | Ingests URLs into vector store. Edit URLs in Makefile. |
+| `make doc-query` | Vector similarity search via `doc query ABECS code`. |
+| `make cache-ls` | Lists BoltDB cache entries (`cache ls`). |
+| `make snapshot` | `goreleaser release --snapshot --clean` |
+| `make validate` | Runs `test lint vulncheck` in sequence. |
 
-## Architecture
+## Entrypoint & layout
 
-One entrypoint:
-- **`cmd/cli/`** - main app: cobra CLI with subcommands `chat`, `doc add/query`, `cache ls`
-
-### Internal layout
+Single entrypoint: `cmd/cli/` (cobra CLI). Subcommands: `chat`, `doc {add,query}`, `cache ls`.
 
 ```
 internal/
-  cache/         - BoltDB backend for langchaingo cache
+  cache/         - BoltDB cache.Backend for langchaingo (`.db/cache.db`)
   client/
-    llm/         - Backend interface + handler
-      ollama/    - Ollama LLM backend
-    custom_handler.go - slog-based langchaingo callback handler
-  config/        - viper property defaults (constants.go), getters (configs.go)
-  service/       - ConversationService facade
-  tools/
-    docs/        - documentation_search tool (vector store)
-  tui/
-    chatv2/      - Bubble Tea v2 chat model
+    llm/         - Backend interface + otel-metric callback handler
+      ollama/    - Ollama LLM backend (only active backend)
+  config/        - viper defaults as setup.Prop vars
+  service/       - thin ConversationService facade
+  tools/docs/    - documentation_search tool (titan-embeddings + chromem)
+  tui/chatv2/    - Bubble Tea v2 TUI model
 ```
 
-### LangChain tools
+## Key constraints
 
-| Tool name | Package | Backend |
-|-----------|---------|---------|
-| `documentation_search` | `tools/docs` | Chromem vector store with Titan embeddings |
+- `ChatScreen()` (in `tui/chatv2/model.go`) directly creates the Ollama backend inline — constructor injection is not used.
+- `doc {add,query}` and `cache ls` create an Ollama backend **without tools**; their methods (`AddDocument`, `QueryDocuments`, `ListCache`) are stubs that return `"not implemented"`.
 
-### Persistence (local)
+## Persistence
 
 | Data | Path | Enabled by default? |
 |------|------|---------------------|
-| LLM response cache | `.db/cache.db` (BoltDB) | No (`cache.enabled: false` in config.yaml) |
-| Chat memory | `.db/chat.db` (SQLite) | Yes, when `--session` flag is passed |
+| Ollama chat history (SQLite) | `chat_cache.db` | Yes (`ollama.generation.cache.enabled: true` in config.yaml) |
+| `.gitignore` | `*.db` | Yes |
+| `.db/` dir | Not in `.gitignore` | Persists after clean |
 
 ## Config quirks
 
-- App name: `chat-poc-cli`
-- DB credentials passed as `CHAT_DB_USER` / `CHAT_DB_PASS` env vars (not in config.yaml)
-- Config defaults live in `internal/config/constants.go` as `setup.Prop` vars
-- GoReleaser project name: `ai-chat`, binary: `chat-cli`
-- Telemetry disabled by default (`telemetry.enabled: false`)
-- `.db/` dir is NOT in `.gitignore` but `*.db` is
+- App name for OpenTelemetry: `chat-poc`; goreleaser project name: `ai-chat`, binary: `chat-cli`.
+- `CHAT_DB_USER` / `CHAT_DB_PASS` env vars are defined as config props but **not consumed by any code**.
+- `--session` flag: defaults to a random UUID on `chat`; explicitly set in `make debug`.
 
 ## Tests
 
-Minimal coverage:
-- `internal/cache/boltdb_test.go` - BoltDB cache Put/Get/List/Override (table-driven, testify/assert)
-- `internal/client/llm/ollama/opts_test.go` - Ollama config loading tests
-
-No mocks, no integration tests, no test fixtures.
+Minimal: `internal/cache/boltdb_test.go` (table-driven, testify/assert) and `internal/client/llm/ollama/opts_test.go`. No mocks, no integration tests.
 
 ## GoReleaser
 
@@ -80,4 +67,4 @@ No mocks, no integration tests, no test fixtures.
 goreleaser release --snapshot --clean
 ```
 
-Binary: `chat-cli`, archives include `config.yaml`, `LICENSE`, `README.md`.
+Archives include `config.yaml`, `LICENSE`, `README.md`.

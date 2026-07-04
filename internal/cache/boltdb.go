@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"chat-poc/internal/config"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -42,7 +41,6 @@ func GetDB(path string) (*bolt.DB, error) {
 
 	opts := bolt.DefaultOptions
 	opts.ReadOnly = false
-	opts.Timeout = config.GetBedrockCachePersistTimeout()
 
 	db, err := bolt.Open(path, 0600, opts)
 	if err != nil {

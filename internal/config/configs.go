@@ -1,8 +1,6 @@
 package config
 
 import (
-	"time"
-
 	"github.com/spf13/viper"
 )
 
@@ -24,8 +22,4 @@ func GetDBPort() string {
 
 func GetDBName() string {
 	return viper.GetString(DBNamePropKey)
-}
-
-func GetBedrockCachePersistTimeout() time.Duration {
-	return viper.GetDuration(BedrockCachePersistTimeoutProp.Key)
 }

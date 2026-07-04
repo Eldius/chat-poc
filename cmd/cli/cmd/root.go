@@ -21,21 +21,9 @@ var rootCmd = &cobra.Command{
 		setup.WithConfigFileToBeUsed(cfgFile),
 		setup.WithDefaultCfgFileLocations("."),
 		setup.WithDefaultCfgFileName("config"),
-		setup.WithEnvPrefix("CHAT"),
+		setup.WithEnvPrefix("chat"),
 		setup.WithDefaultValues(initCfg.DefaultConfigValuesLogFileMap),
-		setup.WithProps(
-			config.BedrockRegionProp,
-			config.BedrockInferenceModelProp,
-			config.BedrockEmbeddingModelProp,
-			config.BedrockInferenceTemperatureProp,
-			config.BedrockInferenceMaxIterationsProp,
-			config.BedrockInferenceTopKProp,
-			config.BedrockInferenceTopPProp,
-			config.BedrockCacheEnabledProp,
-			config.BedrockCachePersistTimeoutProp,
-			config.BedrockCacheDBPathProp,
-			config.BedrockChatMemoryDBPathProp,
-		),
+		setup.WithProps(),
 		setup.WithOpenTelemetryOptions(
 			telemetry.WithService(config.AppName, config.Version, "local"),
 		),
@@ -60,7 +48,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.chat-poc.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is config.yaml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
