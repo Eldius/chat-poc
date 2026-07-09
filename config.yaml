@@ -8,14 +8,21 @@ telemetry:
     endpoint: "192.168.0.152:4317"
   logs:
     endpoint: "192.168.0.152:4317"
-ollama:
+log:
+  redacted_keys:
+    - api_key
+    - authorization
+backend:
+  type: ollama
   endpoint: http://192.168.0.185:11434
   embedding:
     model: nomic-embed-text
     chunk_size: 2000
     chunk_overlap: 300
   generation:
-    model: llama3:8b-instruct-q4_K_M
+#    model: llama3:8b-instruct-q4_K_M
+    model: ProAdminGod/gemma3-tuned
+    think: true
     cache:
       enabled: true
       similarity_threshold: 0.9

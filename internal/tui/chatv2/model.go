@@ -2,7 +2,6 @@ package chatv2
 
 import (
 	"chat-poc/internal/client/llm"
-	"chat-poc/internal/client/llm/ollama"
 	"context"
 	"fmt"
 	"github.com/eldius/initial-config-go/logs"
@@ -40,9 +39,11 @@ type Model struct {
 	userStyle      lipgloss.Style
 	assistantStyle lipgloss.Style
 	errorStyle     lipgloss.Style
+
+	backend string
 }
 
-func NewModel(ctx context.Context, cb llm.ChatCallback) *Model {
+func NewModel(ctx context.Context, cb llm.ChatCallback, backend string) *Model {
 	ta := textarea.New()
 	ta.Placeholder = "Type your message and press Enter..."
 	ta.SetHeight(3)
@@ -59,11 +60,12 @@ func NewModel(ctx context.Context, cb llm.ChatCallback) *Model {
 	sp := spinner.New(spinner.WithSpinner(spinner.Dot))
 
 	return &Model{
-		vp:  vp,
-		ta:  ta,
-		sp:  sp,
-		cb:  cb,
-		ctx: ctx,
+		vp:      vp,
+		ta:      ta,
+		sp:      sp,
+		cb:      cb,
+		ctx:     ctx,
+		backend: backend,
 		userStyle: lipgloss.NewStyle().
 			Bold(true).
 			Background(lipgloss.Color("#2222AA")).
@@ -198,7 +200,7 @@ func (m *Model) View() tea.View {
 	}
 
 	divider := strings.Repeat("─", max(10, m.width-4))
-	content := fmt.Sprintf("Chat v2\n%s\n\n%s\n\n%s", divider, m.vp.View(), inputView)
+	content := fmt.Sprintf("Chat v2 (%s)\n%s\n\n%s\n\n%s", m.backend, divider, m.vp.View(), inputView)
 
 	// Footer
 	if m.width > 2 {
@@ -277,20 +279,23 @@ func (m *Model) runCallback(userText string) tea.Cmd {
 }
 
 func ChatScreen(ctx context.Context) error {
-	opts, err := llm.LoadOllamaOpts()
+
+	opts, err := llm.GetBackendOpts()
 	if err != nil {
-		return fmt.Errorf("failed to load Ollama options: %w", err)
+		return fmt.Errorf("failed to get backend opts: %w", err)
 	}
-	m, err := ollama.GetOllamaClient(opts)
+
+	m, err := llm.GetClient(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to create Ollama client: %w", err)
+		return fmt.Errorf("failed to get client: %w", err)
 	}
-	backend, err := llm.NewBackend(m, &opts)
+
+	backend, err := llm.NewBackend(m, opts)
 	if err != nil {
 		return fmt.Errorf("failed to create backend: %w", err)
 	}
 
-	p := tea.NewProgram(NewModel(context.Background(), llm.NewChatCallback(backend)))
+	p := tea.NewProgram(NewModel(ctx, llm.NewChatCallback(backend), opts.Type.String()))
 	if _, err := p.Run(); err != nil {
 		err = fmt.Errorf("running tui: %w", err)
 		logs.NewLogger(ctx).WithError(err).Error("chat app has panicked")

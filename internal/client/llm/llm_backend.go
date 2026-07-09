@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/caarlos0/log"
 	"github.com/eldius/initial-config-go/logs"
 	"github.com/eldius/initial-config-go/telemetry"
 	"github.com/tmc/langchaingo/agents"
@@ -18,6 +17,19 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	trace2 "go.opentelemetry.io/otel/trace"
 )
+
+const (
+	OllamaBackendType BackendType = "ollama"
+	OpenAiBackendType BackendType = "openai"
+
+	backendTypeKey = "backend.type"
+)
+
+type BackendType string
+
+func (b BackendType) String() string {
+	return string(b)
+}
 
 type Backend interface {
 	AddDocument(ctx context.Context, documentPaths []string) error
@@ -68,18 +80,19 @@ func NewChatCallback(backend Backend) ChatCallback {
 
 // backend is an implementation of the backend interface for the Ollama backend
 type backend struct {
-	opts     *Opts
 	llm      llms.Model
 	toolList []tools.Tool
 	executor *agents.Executor
 	agent    agents.Agent
 	handler  callbacks.Handler
 	mem      schema.Memory
+	opts     Opts
 }
 
 func NewBackend(m llms.Model, opts *Opts, toolList ...tools.Tool) (Backend, error) {
+	log := logs.NewLogger(context.Background())
 	var history schema.Memory
-	handler, err := NewHandler("backend")
+	handler, err := NewHandler(opts.Type.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create handler: %w", err)
 	}
@@ -108,13 +121,13 @@ func NewBackend(m llms.Model, opts *Opts, toolList ...tools.Tool) (Backend, erro
 	}
 
 	return &backend{
-		opts:     opts,
 		llm:      m,
 		agent:    agent,
 		executor: executor,
 		toolList: toolList,
 		handler:  handler,
 		mem:      history,
+		opts:     *opts,
 	}, nil
 }
 
@@ -198,4 +211,32 @@ func (o *backend) AskQuestion(ctx context.Context, question string) (string, err
 		})
 	}
 	return o.AskWithAgents(ctx, question)
+}
+
+func GetBackendOpts() (*Opts, error) {
+	opts, err := LoadOpts()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load backend options: %w", err)
+	}
+	return &opts, nil
+}
+
+func GetClient(ctx context.Context) (llms.Model, error) {
+	opts, err := GetBackendOpts()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load LLM options: %w", err)
+	}
+
+	logs.NewLogger(ctx, logs.KeyValueData{
+		"backend": opts.Type,
+	}).Info("GetClient")
+
+	switch opts.Type {
+	case OllamaBackendType:
+		return GetOllamaClient(*opts)
+	case OpenAiBackendType:
+		return GetOpenAiClient(*opts)
+	default:
+		return nil, fmt.Errorf("unsupported LLM backend: %s", opts.Type)
+	}
 }

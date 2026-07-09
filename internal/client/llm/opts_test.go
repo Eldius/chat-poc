@@ -14,7 +14,7 @@ func TestLoadOllamaOpts(t *testing.T) {
 		viper.Reset()
 	})
 
-	opts, err := LoadOllamaOpts()
+	opts, err := LoadOpts()
 	assert.NoError(t, err)
 	assert.Equal(t, "http://test:11434", opts.Endpoint)
 	assert.Equal(t, "test-model", opts.Generation.Model)
@@ -25,7 +25,7 @@ func TestLoadOllamaOptsDefaults(t *testing.T) {
 		viper.Reset()
 	})
 
-	opts, err := LoadOllamaOpts()
+	opts, err := LoadOpts()
 	assert.NoError(t, err)
 	assert.Empty(t, opts.Endpoint)
 	assert.Empty(t, opts.Generation.Model)

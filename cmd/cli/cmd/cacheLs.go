@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"chat-poc/internal/client/llm"
-	"chat-poc/internal/client/llm/ollama"
 	"chat-poc/internal/service"
 	"fmt"
 
@@ -15,11 +14,11 @@ var cacheLsCmd = &cobra.Command{
 	Short: "Lists all the cached data",
 	Long:  `Lists all the cached data.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		opts, err := llm.LoadOllamaOpts()
+		opts, err := llm.LoadOpts()
 		if err != nil {
 			return fmt.Errorf("failed to load Ollama options: %w", err)
 		}
-		m, err := ollama.GetOllamaClient(opts)
+		m, err := llm.GetOllamaClient(opts)
 		if err != nil {
 			return fmt.Errorf("failed to create Ollama client: %w", err)
 		}

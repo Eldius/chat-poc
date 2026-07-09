@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"chat-poc/internal/client/llm"
-	"chat-poc/internal/client/llm/ollama"
 	"chat-poc/internal/service"
 	"fmt"
 	"strings"
@@ -16,11 +15,11 @@ var docQueryCmd = &cobra.Command{
 	Short: "Similarity query for documents",
 	Long:  `Similarity query for documents.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		opts, err := llm.LoadOllamaOpts()
+		opts, err := llm.LoadOpts()
 		if err != nil {
 			return fmt.Errorf("failed to load Ollama options: %w", err)
 		}
-		m, err := ollama.GetOllamaClient(opts)
+		m, err := llm.GetOllamaClient(opts)
 		if err != nil {
 			return fmt.Errorf("failed to create Ollama client: %w", err)
 		}
