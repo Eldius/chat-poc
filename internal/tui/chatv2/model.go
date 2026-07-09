@@ -5,13 +5,16 @@ import (
 	"context"
 	"fmt"
 	"github.com/eldius/initial-config-go/logs"
+	"os"
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"gopkg.in/yaml.v3"
 )
 
 type message struct {
@@ -25,16 +28,18 @@ type sendResultMsg struct {
 }
 
 type Model struct {
-	vp         viewport.Model
-	ta         textarea.Model
-	sp         spinner.Model
-	messages   []message
-	processing bool
-	cb         llm.ChatCallback
-	width      int
-	height     int
-	ctx        context.Context
-	showHelp   bool
+	vp             viewport.Model
+	ta             textarea.Model
+	sp             spinner.Model
+	messages       []message
+	processing     bool
+	cb             llm.ChatCallback
+	width          int
+	height         int
+	ctx            context.Context
+	showHelp       bool
+	showExport     bool
+	exportFilename string
 
 	userStyle      lipgloss.Style
 	assistantStyle lipgloss.Style
@@ -72,7 +77,8 @@ func NewModel(ctx context.Context, cb llm.ChatCallback, backend string) *Model {
 			Foreground(lipgloss.Color("#FFFFFF")),
 		assistantStyle: lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("#22AA22")),
+			Background(lipgloss.Color("#22AA22")).
+			Foreground(lipgloss.Color("#FFFFFF")),
 		errorStyle: lipgloss.NewStyle().
 			Bold(true).
 			Background(lipgloss.Color("#EE2222")),
@@ -126,6 +132,24 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
+		// Export mode: confirm or cancel
+		if m.showExport {
+			switch msg.String() {
+			case "ctrl+s", "esc":
+				m.showExport = false
+			case "enter":
+				m.showExport = false
+				if err := m.exportToYAML(); err != nil {
+					m.messages = append(m.messages, message{
+						role:    "error",
+						content: fmt.Sprintf("Failed to export chat: %v", err),
+					})
+					m.refreshViewport()
+				}
+			}
+			return m, nil
+		}
+
 		// Processing: wait for response
 		if m.processing {
 			if msg.String() == "esc" {
@@ -138,6 +162,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+h":
 			m.showHelp = true
+			return m, nil
+		case "ctrl+s":
+			m.showExport = true
+			m.exportFilename = fmt.Sprintf("chat-export-%s.yaml", time.Now().Format("20060102-150405"))
 			return m, nil
 		case "esc":
 			return m, tea.Quit
@@ -208,7 +236,7 @@ func (m *Model) View() tea.View {
 			Width(m.width - 2).
 			Align(lipgloss.Center).
 			Foreground(lipgloss.Color("240")).
-			Render("Ctrl+H: Help  •  Enter: Send  •  Ctrl+C: Quit")
+			Render("Ctrl+H: Help  •  Ctrl+S: Export  •  Enter: Send  •  Ctrl+C: Quit")
 		content = fmt.Sprintf("%s\n%s", content, footer)
 	}
 
@@ -217,6 +245,7 @@ func (m *Model) View() tea.View {
 		helpText := `             Help
 
 Enter        Send message
+Ctrl+S       Export chat
 Ctrl+H       Toggle help
 Esc          Close help / Quit
 Ctrl+C       Quit
@@ -236,6 +265,27 @@ Press Esc or Ctrl+H to close`
 			Render(helpText)
 
 		content = lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, helpBox)
+	}
+
+	// Export overlay
+	if m.showExport && m.width > 0 && m.height > 0 {
+		exportText := fmt.Sprintf(`       Export Chat
+
+File: %s
+
+Enter: Save   •   Esc: Cancel`, m.exportFilename)
+
+		exportBox := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			Width(40).
+			Height(8).
+			Align(lipgloss.Left).
+			PaddingLeft(2).
+			AlignVertical(lipgloss.Center).
+			BorderForeground(lipgloss.Color("62")).
+			Render(exportText)
+
+		content = lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, exportBox)
 	}
 
 	v := tea.NewView(content)
@@ -276,6 +326,36 @@ func (m *Model) runCallback(userText string) tea.Cmd {
 		resp, err := m.cb(m.ctx, userText)
 		return sendResultMsg{resp: resp, err: err}
 	}
+}
+
+func (m *Model) exportToYAML() error {
+	type exportMsg struct {
+		Role    string `yaml:"role"`
+		Content string `yaml:"content"`
+	}
+	type export struct {
+		Backend  string      `yaml:"backend"`
+		Messages []exportMsg `yaml:"messages"`
+	}
+
+	msgs := make([]exportMsg, len(m.messages))
+	for i, msg := range m.messages {
+		msgs[i] = exportMsg{Role: msg.role, Content: msg.content}
+	}
+
+	data, err := yaml.Marshal(export{
+		Backend:  m.backend,
+		Messages: msgs,
+	})
+	if err != nil {
+		return fmt.Errorf("marshaling chat: %w", err)
+	}
+
+	if err := os.WriteFile(m.exportFilename, data, 0644); err != nil {
+		return fmt.Errorf("writing file: %w", err)
+	}
+
+	return nil
 }
 
 func ChatScreen(ctx context.Context) error {

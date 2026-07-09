@@ -21,8 +21,6 @@ import (
 const (
 	OllamaBackendType BackendType = "ollama"
 	OpenAiBackendType BackendType = "openai"
-
-	backendTypeKey = "backend.type"
 )
 
 type BackendType string

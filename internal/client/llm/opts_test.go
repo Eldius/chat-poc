@@ -8,8 +8,8 @@ import (
 )
 
 func TestLoadOllamaOpts(t *testing.T) {
-	viper.Set("ollama.endpoint", "http://test:11434")
-	viper.Set("ollama.generation.model", "test-model")
+	viper.Set("backend.endpoint", "http://test:11434")
+	viper.Set("backend.generation.model", "test-model")
 	t.Cleanup(func() {
 		viper.Reset()
 	})
