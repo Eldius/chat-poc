@@ -1,6 +1,6 @@
 
 clear-log:
-	-rm execution.log
+	-rm *.log
 
 chat: clear-log
 	CHAT_DB_USER=$(DB_USER) \
