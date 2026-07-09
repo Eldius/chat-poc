@@ -366,6 +366,14 @@ github.com/elazarl/goproxy v1.7.2 h1:Y2o6urb7Eule09PjlhQRGNsqRfPmYI3KKQLFpCAV3+o
 github.com/elazarl/goproxy v1.7.2/go.mod h1:82vkLNir0ALaW14Rc399OTTjyNREgmdL2cVoIbS6XaE=
 github.com/eldius/initial-config-go v0.0.54 h1:OUY53rSlM3W7qt38wcfDtsRD4rCIbaIOhTn2PiEQO+g=
 github.com/eldius/initial-config-go v0.0.54/go.mod h1:qn5rx/vgGo8TykhVwZtwhPY30RaRc6xOocRDKvwhhLM=
+github.com/eldius/initial-config-go v0.0.55 h1:joEpvyEUcXwetxvEXIkOhN9Q1nfFGbuOhqSSPMKNaMA=
+github.com/eldius/initial-config-go v0.0.55/go.mod h1:qn5rx/vgGo8TykhVwZtwhPY30RaRc6xOocRDKvwhhLM=
+github.com/eldius/initial-config-go v0.0.56 h1:3rI8ktCWZhIsX+W7Pm4oDCBzNpKEzN4GNtxjxf2QLbo=
+github.com/eldius/initial-config-go v0.0.56/go.mod h1:qn5rx/vgGo8TykhVwZtwhPY30RaRc6xOocRDKvwhhLM=
+github.com/eldius/initial-config-go v0.0.57 h1:xn/Q8qRHC3eZXsEjPrf08JV4HOkJL88kO4sdIrdLjd0=
+github.com/eldius/initial-config-go v0.0.57/go.mod h1:qn5rx/vgGo8TykhVwZtwhPY30RaRc6xOocRDKvwhhLM=
+github.com/eldius/initial-config-go v0.0.58 h1:7uiGnPzNiBvaeZiU1oAQ351m7PXuH7pv4a2XPSojO14=
+github.com/eldius/initial-config-go v0.0.58/go.mod h1:qn5rx/vgGo8TykhVwZtwhPY30RaRc6xOocRDKvwhhLM=
 github.com/emirpasic/gods v1.18.1 h1:FXtiHYKDGKCW2KzwZKx0iC0PQmdlorYgdFG9jPXJ1Bc=
 github.com/emirpasic/gods v1.18.1/go.mod h1:8tpGGwCnJ5H4r6BWwaV6OrWmMoPhUl5jm/FMNAnJvWQ=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=

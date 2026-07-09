@@ -7,7 +7,7 @@ require (
 	charm.land/bubbletea/v2 v2.0.7
 	charm.land/lipgloss/v2 v2.0.4
 	github.com/caarlos0/log v0.6.0
-	github.com/eldius/initial-config-go v0.0.54
+	github.com/eldius/initial-config-go v0.0.58
 	github.com/glebarez/sqlite v1.11.0
 	github.com/google/uuid v1.6.0
 	github.com/spf13/cobra v1.10.2

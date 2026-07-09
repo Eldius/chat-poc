@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"chat-poc/internal/client/llm"
 	"chat-poc/internal/client/llm/ollama"
 	"chat-poc/internal/service"
 	"fmt"
@@ -17,14 +18,19 @@ var docAddCmd = &cobra.Command{
 		if len(docAddCmdOpts.path) == 0 {
 			return fmt.Errorf("--path flag is required")
 		}
-		opts, err := ollama.LoadOllamaOpts()
+		opts, err := llm.LoadOllamaOpts()
 		if err != nil {
-			return fmt.Errorf("loading ollama opts: %w", err)
+			return fmt.Errorf("failed to load Ollama options: %w", err)
 		}
-		backend, err := ollama.NewOllamaBackend(&opts)
+		m, err := ollama.GetOllamaClient(opts)
 		if err != nil {
-			return fmt.Errorf("creating backend: %w", err)
+			return fmt.Errorf("failed to create Ollama client: %w", err)
 		}
+		backend, err := llm.NewBackend(m, &opts)
+		if err != nil {
+			return fmt.Errorf("failed to create backend: %w", err)
+		}
+
 		c := service.NewConversation(backend)
 		return c.AddDocument(cmd.Context(), docAddCmdOpts.path)
 	},

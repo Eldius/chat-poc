@@ -8,10 +8,6 @@ telemetry:
     endpoint: "192.168.0.152:4317"
   logs:
     endpoint: "192.168.0.152:4317"
-db:
-  host: "localhost"
-  port: 5432
-  name: postgres
 ollama:
   endpoint: http://192.168.0.185:11434
   embedding:

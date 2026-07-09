@@ -35,6 +35,7 @@ type Model struct {
 	width      int
 	height     int
 	ctx        context.Context
+	showHelp   bool
 
 	userStyle      lipgloss.Style
 	assistantStyle lipgloss.Style
@@ -95,7 +96,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		vpHeight := msg.Height - 6
+		vpHeight := msg.Height - 8
 		vpWidth := msg.Width - 4
 		if vpHeight < 3 {
 			vpHeight = 3
@@ -109,15 +110,34 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyPressMsg:
-		if m.processing {
+		// Ctrl+C always quits
+		if msg.String() == "ctrl+c" {
+			return m, tea.Quit
+		}
+
+		// Help mode: only close or quit
+		if m.showHelp {
 			switch msg.String() {
-			case "ctrl+c", "esc":
+			case "ctrl+h", "esc":
+				m.showHelp = false
+			}
+			return m, nil
+		}
+
+		// Processing: wait for response
+		if m.processing {
+			if msg.String() == "esc" {
 				return m, tea.Quit
 			}
 			return m, nil
 		}
+
+		// Normal mode
 		switch msg.String() {
-		case "ctrl+c", "esc":
+		case "ctrl+h":
+			m.showHelp = true
+			return m, nil
+		case "esc":
 			return m, tea.Quit
 		case "enter":
 			text := strings.TrimSpace(m.ta.Value())
@@ -170,8 +190,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) View() tea.View {
-	m.refreshViewport()
-
 	var inputView string
 	if m.processing {
 		inputView = fmt.Sprintf(" %s Thinking...", m.sp.View())
@@ -181,6 +199,43 @@ func (m *Model) View() tea.View {
 
 	divider := strings.Repeat("─", max(10, m.width-4))
 	content := fmt.Sprintf("Chat v2\n%s\n\n%s\n\n%s", divider, m.vp.View(), inputView)
+
+	// Footer
+	if m.width > 2 {
+		footer := lipgloss.NewStyle().
+			Width(m.width - 2).
+			Align(lipgloss.Center).
+			Foreground(lipgloss.Color("240")).
+			Render("Ctrl+H: Help  •  Enter: Send  •  Ctrl+C: Quit")
+		content = fmt.Sprintf("%s\n%s", content, footer)
+	}
+
+	// Help overlay
+	if m.showHelp && m.width > 0 && m.height > 0 {
+		helpText := `             Help
+
+Enter        Send message
+Ctrl+H       Toggle help
+Esc          Close help / Quit
+Ctrl+C       Quit
+
+Mouse wheel  Scroll chat
+
+Press Esc or Ctrl+H to close`
+
+		helpBox := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			Width(40).
+			Height(12).
+			Align(lipgloss.Left).
+			PaddingLeft(2).
+			AlignVertical(lipgloss.Center).
+			BorderForeground(lipgloss.Color("62")).
+			Render(helpText)
+
+		content = lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, helpBox)
+	}
+
 	v := tea.NewView(content)
 	v.AltScreen = true
 	return v
@@ -222,13 +277,17 @@ func (m *Model) runCallback(userText string) tea.Cmd {
 }
 
 func ChatScreen(ctx context.Context) error {
-	opts, err := ollama.LoadOllamaOpts()
+	opts, err := llm.LoadOllamaOpts()
 	if err != nil {
 		return fmt.Errorf("failed to load Ollama options: %w", err)
 	}
-	backend, err := ollama.NewOllamaBackend(&opts)
+	m, err := ollama.GetOllamaClient(opts)
 	if err != nil {
-		return fmt.Errorf("failed to create Ollama backend: %w", err)
+		return fmt.Errorf("failed to create Ollama client: %w", err)
+	}
+	backend, err := llm.NewBackend(m, &opts)
+	if err != nil {
+		return fmt.Errorf("failed to create backend: %w", err)
 	}
 
 	p := tea.NewProgram(NewModel(context.Background(), llm.NewChatCallback(backend)))

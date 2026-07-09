@@ -3,6 +3,7 @@ package cmd
 import (
 	"chat-poc/internal/config"
 	"os"
+	"time"
 
 	"github.com/eldius/initial-config-go/setup"
 	"github.com/eldius/initial-config-go/telemetry"
@@ -28,6 +29,7 @@ var rootCmd = &cobra.Command{
 			telemetry.WithService(config.AppName, config.Version, "local"),
 		),
 	),
+	PersistentPostRunE: setup.PersistentPostRunE(1 * time.Second),
 }
 
 var (
