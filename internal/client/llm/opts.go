@@ -1,8 +1,8 @@
 package llm
 
 import (
+	"encoding/json"
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v3"
 	"log/slog"
 )
 
@@ -42,7 +42,8 @@ func LoadOpts() (Opts, error) {
 		return opts, err
 	}
 
-	if b, err := yaml.Marshal(opts); err == nil {
+	//if b, err := yaml.Marshal(opts); err == nil {
+	if b, err := json.MarshalIndent(opts, "", "    "); err == nil {
 		slog.With("backend_opts", string(b)).Info("backend opts")
 	}
 

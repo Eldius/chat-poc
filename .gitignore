@@ -5,3 +5,4 @@
 *.db
 # Added by goreleaser init:
 dist/
+chat-export-*.md

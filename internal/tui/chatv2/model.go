@@ -14,7 +14,6 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"gopkg.in/yaml.v3"
 )
 
 type message struct {
@@ -165,7 +164,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "ctrl+s":
 			m.showExport = true
-			m.exportFilename = fmt.Sprintf("chat-export-%s.yaml", time.Now().Format("20060102-150405"))
+			m.exportFilename = fmt.Sprintf("chat-export-%s.md", time.Now().Format("20060102-150405"))
 			return m, nil
 		case "esc":
 			return m, tea.Quit
@@ -329,29 +328,30 @@ func (m *Model) runCallback(userText string) tea.Cmd {
 }
 
 func (m *Model) exportToYAML() error {
-	type exportMsg struct {
-		Role    string `yaml:"role"`
-		Content string `yaml:"content"`
-	}
-	type export struct {
-		Backend  string      `yaml:"backend"`
-		Messages []exportMsg `yaml:"messages"`
-	}
+	var b strings.Builder
 
-	msgs := make([]exportMsg, len(m.messages))
+	b.WriteString("# Chat Export\n\n")
+	b.WriteString(fmt.Sprintf("**Backend:** %s  \n", m.backend))
+	b.WriteString(fmt.Sprintf("**Exported:** %s  \n\n", time.Now().Format("2006-01-02 15:04:05")))
+	b.WriteString("---\n\n")
+
 	for i, msg := range m.messages {
-		msgs[i] = exportMsg{Role: msg.role, Content: msg.content}
+		if i > 0 {
+			b.WriteString("---\n\n")
+		}
+		switch msg.role {
+		case "user":
+			b.WriteString("## User\n\n")
+		case "assistant":
+			b.WriteString("## Assistant\n\n")
+		case "error":
+			b.WriteString("## Error\n\n")
+		}
+		b.WriteString(msg.content)
+		b.WriteString("\n\n")
 	}
 
-	data, err := yaml.Marshal(export{
-		Backend:  m.backend,
-		Messages: msgs,
-	})
-	if err != nil {
-		return fmt.Errorf("marshaling chat: %w", err)
-	}
-
-	if err := os.WriteFile(m.exportFilename, data, 0644); err != nil {
+	if err := os.WriteFile(m.exportFilename, []byte(b.String()), 0644); err != nil {
 		return fmt.Errorf("writing file: %w", err)
 	}
 

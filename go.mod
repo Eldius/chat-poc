@@ -7,11 +7,13 @@ tool (
 	golang.org/x/vuln/cmd/govulncheck
 )
 
+//replace github.com/eldius/initial-config-go => ../initial-config-go
+
 require (
 	charm.land/bubbles/v2 v2.1.0
 	charm.land/bubbletea/v2 v2.0.7
 	charm.land/lipgloss/v2 v2.0.5
-	github.com/eldius/initial-config-go v0.0.59
+	github.com/eldius/initial-config-go v0.0.61
 	github.com/glebarez/sqlite v1.11.0
 	github.com/google/uuid v1.6.0
 	github.com/spf13/cobra v1.10.2

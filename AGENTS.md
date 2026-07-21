@@ -5,6 +5,7 @@
 ```sh
 go build ./...
 go test ./...
+go vet ./...
 make validate       # test + golangci-lint + govulncheck
 ```
 
@@ -22,9 +23,11 @@ Env prefix `CHAT`, config file `config.yaml` via `github.com/eldius/initial-conf
 | `make snapshot` | `goreleaser release --snapshot --clean` |
 | `make validate` | Runs `test lint vulncheck` in sequence. |
 
+Standalone: `golangci-lint run`, `go tool govulncheck ./...`.
+
 ## Entrypoint & layout
 
-Single entrypoint: `cmd/cli/` (cobra CLI). Subcommands: `chat`, `doc {add,query}`, `cache ls`.
+Single entrypoint: `cmd/cli/` (cobra CLI, `main.go` → `root.go`). Subcommands: `chat`, `doc {add,query}`, `cache ls`.
 
 ```
 internal/
@@ -32,22 +35,37 @@ internal/
   client/
     llm/         - Backend interface + otel-metric callback handler
       ollama/    - Ollama LLM backend (only active backend)
-  config/        - viper defaults as setup.Prop vars
-  service/       - thin ConversationService facade
+      openai.go  - OpenAI backend (exists but not wired as active)
+  config/        - viper defaults as setup.Prop vars (constants.go, configs.go)
+  service/       - ConversationService facade delegating to Backend interface
   tools/docs/    - documentation_search tool (titan-embeddings + chromem)
-  tui/chatv2/    - Bubble Tea v2 TUI model
+  tui/chatv2/    - Bubble Tea v2 TUI model (single file: model.go)
 ```
 
 ## Key constraints
 
 - `ChatScreen()` (in `tui/chatv2/model.go`) directly creates the Ollama backend inline — constructor injection is not used.
-- `doc {add,query}` and `cache ls` create an Ollama backend **without tools**; their methods (`AddDocument`, `QueryDocuments`, `ListCache`) are stubs that return `"not implemented"`.
+- `doc {add,query}` and `cache ls` go through `ConversationService` → `Backend` interface; the concrete `backend` methods (`AddDocument`, `QueryDocuments`, `ListCache`) all return `"not implemented"`.
+- Backend `Ask` = plain LLM chat (no tools). `AskWithAgents` = with tools (requires executor). The TUI uses `Ask` only.
+
+## TUI keybindings
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Send message |
+| `Ctrl+S` | Export chat to `chat-export-*.md` |
+| `Ctrl+H` | Toggle help |
+| `Esc` | Close popup / quit |
+| `Ctrl+C` | Quit |
+| Mouse wheel | Scroll chat |
+
+Export saves conversation as Markdown (`chat-export-{timestamp}.md`). The `.gitignore` already covers `chat-export-*.md`.
 
 ## Persistence
 
 | Data | Path | Enabled by default? |
 |------|------|---------------------|
-| Ollama chat history (SQLite) | `chat_cache.db` | Yes (`ollama.generation.cache.enabled: true` in config.yaml) |
+| Ollama chat history (SQLite) | `chat_cache.db` | Yes (`ollama.generation.cache.enabled: true` in config) |
 | `.gitignore` | `*.db` | Yes |
 | `.db/` dir | Not in `.gitignore` | Persists after clean |
 
