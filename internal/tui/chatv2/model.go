@@ -331,8 +331,8 @@ func (m *Model) exportToYAML() error {
 	var b strings.Builder
 
 	b.WriteString("# Chat Export\n\n")
-	b.WriteString(fmt.Sprintf("**Backend:** %s  \n", m.backend))
-	b.WriteString(fmt.Sprintf("**Exported:** %s  \n\n", time.Now().Format("2006-01-02 15:04:05")))
+	_, _ = fmt.Fprintf(&b, "**Backend:** %s  \n", m.backend)
+	_, _ = fmt.Fprintf(&b, "**Exported:** %s  \n\n", time.Now().Format("2006-01-02 15:04:05"))
 	b.WriteString("---\n\n")
 
 	for i, msg := range m.messages {
