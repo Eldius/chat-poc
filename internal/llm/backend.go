@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/eldius/initial-config-go/logs"
 	"github.com/eldius/initial-config-go/telemetry"
 	"github.com/tmc/langchaingo/agents"
@@ -14,8 +15,6 @@ import (
 	"github.com/tmc/langchaingo/memory/sqlite3"
 	"github.com/tmc/langchaingo/schema"
 	"github.com/tmc/langchaingo/tools"
-	"go.opentelemetry.io/otel/attribute"
-	trace2 "go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -29,54 +28,32 @@ func (b BackendType) String() string {
 	return string(b)
 }
 
-type Backend interface {
-	AddDocument(ctx context.Context, documentPaths []string) error
-	QueryDocuments(ctx context.Context, query string) ([]schema.Document, error)
-	ListCache(ctx context.Context) error
+// Chatter is the conversational facet of an LLM backend.
+type Chatter interface {
+	Ask(ctx context.Context, msgs []llms.MessageContent) (string, error)
 	AskWithAgents(ctx context.Context, userInput string) (string, error)
 	Name() string
-	Ask(ctx context.Context, msgs []llms.MessageContent) (string, error)
 }
 
-type ChatCallback func(ctx context.Context, userInput string) (string, error)
-
-func NewChatCallback(backend Backend) ChatCallback {
-	var msgs []llms.MessageContent
-	cb := func(ctx context.Context, userInput string) (string, error) {
-		ctx, span := telemetry.NewSpan(
-			ctx,
-			"llm_backend_ask",
-			trace2.WithSpanKind(trace2.SpanKindClient),
-			trace2.WithAttributes(
-				attribute.String("backend", backend.Name()),
-			),
-		)
-
-		defer span.End()
-
-		msgs = append(msgs, llms.MessageContent{
-			Role: llms.ChatMessageTypeHuman,
-			Parts: []llms.ContentPart{
-				llms.TextPart(userInput),
-			},
-		})
-		reply, err := backend.Ask(ctx, msgs)
-		if err != nil {
-			return "", fmt.Errorf("error asking question: %w", err)
-		}
-		msgs = append(msgs, llms.MessageContent{
-			Role: llms.ChatMessageTypeAI,
-			Parts: []llms.ContentPart{
-				llms.TextPart(reply),
-			},
-		})
-		return reply, nil
-	}
-
-	return cb
+// DocumentStore manages documents for similarity retrieval.
+type DocumentStore interface {
+	AddDocument(ctx context.Context, documentPaths []string) error
+	QueryDocuments(ctx context.Context, query string) ([]schema.Document, error)
 }
 
-// backend is an implementation of the backend interface for the Ollama backend
+// CacheLister lists cached LLM responses.
+type CacheLister interface {
+	ListCache(ctx context.Context) error
+}
+
+// Backend is the full-featured LLM backend.
+type Backend interface {
+	Chatter
+	DocumentStore
+	CacheLister
+}
+
+// backend is the langchaingo-based implementation of Backend.
 type backend struct {
 	llm      llms.Model
 	toolList []tools.Tool
@@ -130,20 +107,20 @@ func NewBackend(m llms.Model, opts *Opts, toolList ...tools.Tool) (Backend, erro
 }
 
 func (o *backend) AddDocument(ctx context.Context, documentPaths []string) error {
-	return fmt.Errorf("AddDocument not implemented for ollama backend")
+	return fmt.Errorf("AddDocument not implemented for %s backend", o.Name())
 }
 
 func (o *backend) QueryDocuments(ctx context.Context, query string) ([]schema.Document, error) {
-	return nil, fmt.Errorf("QueryDocuments not implemented for ollama backend")
+	return nil, fmt.Errorf("QueryDocuments not implemented for %s backend", o.Name())
 }
 
 func (o *backend) ListCache(ctx context.Context) error {
-	return fmt.Errorf("ListCache not implemented for ollama backend")
+	return fmt.Errorf("ListCache not implemented for %s backend", o.Name())
 }
 
 func (o *backend) AskWithAgents(ctx context.Context, userInput string) (string, error) {
 	log := logs.NewLogger(ctx, logs.KeyValueData{
-		"llm_backend": "ollama",
+		"llm_backend": o.Name(),
 		"question":    userInput,
 		"tools":       "true",
 	})
@@ -175,7 +152,7 @@ func (o *backend) AskWithAgents(ctx context.Context, userInput string) (string, 
 
 func (o *backend) Ask(ctx context.Context, msgs []llms.MessageContent) (string, error) {
 	log := logs.NewLogger(ctx, logs.KeyValueData{
-		"llm_backend": "ollama",
+		"llm_backend": o.Name(),
 		"messages":    msgs,
 		"tools":       "false",
 	})
@@ -195,8 +172,9 @@ func (o *backend) Ask(ctx context.Context, msgs []llms.MessageContent) (string, 
 }
 
 func (o *backend) Name() string {
-	return "ollama"
+	return o.opts.Type.String()
 }
+
 func (o *backend) AskQuestion(ctx context.Context, question string) (string, error) {
 	if len(o.toolList) < 1 {
 		return o.Ask(ctx, []llms.MessageContent{
@@ -209,32 +187,4 @@ func (o *backend) AskQuestion(ctx context.Context, question string) (string, err
 		})
 	}
 	return o.AskWithAgents(ctx, question)
-}
-
-func GetBackendOpts() (*Opts, error) {
-	opts, err := LoadOpts()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load backend options: %w", err)
-	}
-	return &opts, nil
-}
-
-func GetClient(ctx context.Context) (llms.Model, error) {
-	opts, err := GetBackendOpts()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load LLM options: %w", err)
-	}
-
-	logs.NewLogger(ctx, logs.KeyValueData{
-		"backend": opts.Type,
-	}).Info("GetClient")
-
-	switch opts.Type {
-	case OllamaBackendType:
-		return GetOllamaClient(*opts)
-	case OpenAiBackendType:
-		return GetOpenAiClient(*opts)
-	default:
-		return nil, fmt.Errorf("unsupported LLM backend: %s", opts.Type)
-	}
 }

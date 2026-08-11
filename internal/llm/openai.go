@@ -14,7 +14,7 @@ func GetOpenAiClient(opts Opts) (llms.Model, error) {
 		openai.WithAPIType(openai.APITypeOpenAI),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Ollama backend: %w", err)
+		return nil, fmt.Errorf("failed to create OpenAI backend: %w", err)
 	}
 	return m, nil
 }

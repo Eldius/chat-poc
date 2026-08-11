@@ -1,19 +1,17 @@
 package chatv2
 
 import (
-	"chat-poc/internal/client/llm"
+	"chat-poc/internal/llm"
 	"context"
 	"fmt"
-	"github.com/eldius/initial-config-go/logs"
-	"os"
 	"strings"
-	"time"
 
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/eldius/initial-config-go/logs"
 )
 
 type message struct {
@@ -101,104 +99,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.vp, cmd = m.vp.Update(msg)
 		return m, cmd
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		vpHeight := msg.Height - 8
-		vpWidth := msg.Width - 4
-		if vpHeight < 3 {
-			vpHeight = 3
-		}
-		if vpWidth < 10 {
-			vpWidth = 10
-		}
-		m.vp.SetWidth(vpWidth)
-		m.vp.SetHeight(vpHeight)
-		m.ta.SetWidth(vpWidth)
+		m.resize(msg.Width, msg.Height)
 		return m, nil
-
 	case tea.KeyPressMsg:
-		// Ctrl+C always quits
-		if msg.String() == "ctrl+c" {
-			return m, tea.Quit
-		}
-
-		// Help mode: only close or quit
-		if m.showHelp {
-			switch msg.String() {
-			case "ctrl+h", "esc":
-				m.showHelp = false
-			}
-			return m, nil
-		}
-
-		// Export mode: confirm or cancel
-		if m.showExport {
-			switch msg.String() {
-			case "ctrl+s", "esc":
-				m.showExport = false
-			case "enter":
-				m.showExport = false
-				if err := m.exportToYAML(); err != nil {
-					m.messages = append(m.messages, message{
-						role:    "error",
-						content: fmt.Sprintf("Failed to export chat: %v", err),
-					})
-					m.refreshViewport()
-				}
-			}
-			return m, nil
-		}
-
-		// Processing: wait for response
-		if m.processing {
-			if msg.String() == "esc" {
-				return m, tea.Quit
-			}
-			return m, nil
-		}
-
-		// Normal mode
-		switch msg.String() {
-		case "ctrl+h":
-			m.showHelp = true
-			return m, nil
-		case "ctrl+s":
-			m.showExport = true
-			m.exportFilename = fmt.Sprintf("chat-export-%s.md", time.Now().Format("20060102-150405"))
-			return m, nil
-		case "esc":
-			return m, tea.Quit
-		case "enter":
-			text := strings.TrimSpace(m.ta.Value())
-			if text == "" {
-				return m, nil
-			}
-			m.messages = append(m.messages, message{
-				role:    "user",
-				content: text,
-			})
-			m.processing = true
-			m.ta.Reset()
-			m.refreshViewport()
-			return m, tea.Sequence(m.spinnerTickCmd(), m.runCallback(text))
-		}
-
+		return m.handleKeyPress(msg)
 	case sendResultMsg:
-		m.processing = false
-		if msg.err != nil {
-			m.messages = append(m.messages, message{
-				role:    "error",
-				content: msg.err.Error(),
-			})
-		} else {
-			m.messages = append(m.messages, message{
-				role:    "assistant",
-				content: msg.resp,
-			})
-		}
-		m.refreshViewport()
+		m.handleSendResult(msg)
 		return m, m.ta.Focus()
-
 	case spinner.TickMsg:
 		if m.processing {
 			var cmd tea.Cmd
@@ -206,7 +113,109 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 	}
+	return m.delegateToInputs(msg)
+}
 
+func (m *Model) resize(width, height int) {
+	m.width = width
+	m.height = height
+	vpHeight := max(height-8, 3)
+	vpWidth := max(width-4, 10)
+	m.vp.SetWidth(vpWidth)
+	m.vp.SetHeight(vpHeight)
+	m.ta.SetWidth(vpWidth)
+}
+
+func (m *Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	// Ctrl+C always quits
+	if msg.String() == "ctrl+c" {
+		return m, tea.Quit
+	}
+	if m.showHelp {
+		return m.handleHelpKey(msg)
+	}
+	if m.showExport {
+		return m.handleExportKey(msg)
+	}
+	if m.processing {
+		// Processing: wait for response
+		if msg.String() == "esc" {
+			return m, tea.Quit
+		}
+		return m, nil
+	}
+	return m.handleInputKey(msg)
+}
+
+// handleHelpKey handles keys in help mode: only close or quit.
+func (m *Model) handleHelpKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+h", "esc":
+		m.showHelp = false
+	}
+	return m, nil
+}
+
+// handleExportKey handles keys in export mode: confirm or cancel.
+func (m *Model) handleExportKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+s", "esc":
+		m.showExport = false
+	case "enter":
+		m.showExport = false
+		if err := m.exportToMarkdown(); err != nil {
+			m.addMessage("error", fmt.Sprintf("Failed to export chat: %v", err))
+		}
+	}
+	return m, nil
+}
+
+// handleInputKey handles keys in normal (input) mode.
+func (m *Model) handleInputKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+h":
+		m.showHelp = true
+		return m, nil
+	case "ctrl+s":
+		m.showExport = true
+		m.exportFilename = defaultExportFilename()
+		return m, nil
+	case "esc":
+		return m, tea.Quit
+	case "enter":
+		return m.sendMessage()
+	default:
+		// Regular typing keys go to the textarea.
+		return m.delegateToInputs(msg)
+	}
+}
+
+func (m *Model) sendMessage() (tea.Model, tea.Cmd) {
+	text := strings.TrimSpace(m.ta.Value())
+	if text == "" {
+		return m, nil
+	}
+	m.addMessage("user", text)
+	m.processing = true
+	m.ta.Reset()
+	return m, tea.Sequence(m.spinnerTickCmd(), m.runCallback(text))
+}
+
+func (m *Model) handleSendResult(msg sendResultMsg) {
+	m.processing = false
+	if msg.err != nil {
+		m.addMessage("error", msg.err.Error())
+		return
+	}
+	m.addMessage("assistant", msg.resp)
+}
+
+func (m *Model) addMessage(role, content string) {
+	m.messages = append(m.messages, message{role: role, content: content})
+	m.refreshViewport()
+}
+
+func (m *Model) delegateToInputs(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
 	if !m.processing {
@@ -241,50 +250,12 @@ func (m *Model) View() tea.View {
 
 	// Help overlay
 	if m.showHelp && m.width > 0 && m.height > 0 {
-		helpText := `             Help
-
-Enter        Send message
-Ctrl+S       Export chat
-Ctrl+H       Toggle help
-Esc          Close help / Quit
-Ctrl+C       Quit
-
-Mouse wheel  Scroll chat
-
-Press Esc or Ctrl+H to close`
-
-		helpBox := lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			Width(40).
-			Height(12).
-			Align(lipgloss.Left).
-			PaddingLeft(2).
-			AlignVertical(lipgloss.Center).
-			BorderForeground(lipgloss.Color("62")).
-			Render(helpText)
-
-		content = lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, helpBox)
+		content = helpOverlay(m.width, m.height)
 	}
 
 	// Export overlay
 	if m.showExport && m.width > 0 && m.height > 0 {
-		exportText := fmt.Sprintf(`       Export Chat
-
-File: %s
-
-Enter: Save   •   Esc: Cancel`, m.exportFilename)
-
-		exportBox := lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			Width(40).
-			Height(8).
-			Align(lipgloss.Left).
-			PaddingLeft(2).
-			AlignVertical(lipgloss.Center).
-			BorderForeground(lipgloss.Color("62")).
-			Render(exportText)
-
-		content = lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, exportBox)
+		content = exportOverlay(m.exportFilename, m.width, m.height)
 	}
 
 	v := tea.NewView(content)
@@ -327,55 +298,9 @@ func (m *Model) runCallback(userText string) tea.Cmd {
 	}
 }
 
-func (m *Model) exportToYAML() error {
-	var b strings.Builder
-
-	b.WriteString("# Chat Export\n\n")
-	_, _ = fmt.Fprintf(&b, "**Backend:** %s  \n", m.backend)
-	_, _ = fmt.Fprintf(&b, "**Exported:** %s  \n\n", time.Now().Format("2006-01-02 15:04:05"))
-	b.WriteString("---\n\n")
-
-	for i, msg := range m.messages {
-		if i > 0 {
-			b.WriteString("---\n\n")
-		}
-		switch msg.role {
-		case "user":
-			b.WriteString("## User\n\n")
-		case "assistant":
-			b.WriteString("## Assistant\n\n")
-		case "error":
-			b.WriteString("## Error\n\n")
-		}
-		b.WriteString(msg.content)
-		b.WriteString("\n\n")
-	}
-
-	if err := os.WriteFile(m.exportFilename, []byte(b.String()), 0644); err != nil {
-		return fmt.Errorf("writing file: %w", err)
-	}
-
-	return nil
-}
-
-func ChatScreen(ctx context.Context) error {
-
-	opts, err := llm.GetBackendOpts()
-	if err != nil {
-		return fmt.Errorf("failed to get backend opts: %w", err)
-	}
-
-	m, err := llm.GetClient(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get client: %w", err)
-	}
-
-	backend, err := llm.NewBackend(m, opts)
-	if err != nil {
-		return fmt.Errorf("failed to create backend: %w", err)
-	}
-
-	p := tea.NewProgram(NewModel(ctx, llm.NewChatCallback(backend), opts.Type.String()))
+// ChatScreen runs the chat TUI with the given callback and backend name.
+func ChatScreen(ctx context.Context, cb llm.ChatCallback, backendName string) error {
+	p := tea.NewProgram(NewModel(ctx, cb, backendName))
 	if _, err := p.Run(); err != nil {
 		err = fmt.Errorf("running tui: %w", err)
 		logs.NewLogger(ctx).WithError(err).Error("chat app has panicked")

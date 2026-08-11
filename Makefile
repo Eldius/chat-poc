@@ -33,13 +33,26 @@ cache-ls:
 	go run ./cmd/cli/ cache ls
 
 test:
-	go test ./... -cover
+	go test ./... -race -cover
 
-vulncheck:
-	go tool govulncheck ./...
+cover:
+	go test ./... -coverprofile=coverage.out
+	go tool cover -func=coverage.out
 
 lint:
 	golangci-lint run
 
-validate: test lint vulncheck
+staticcheck:
+	go tool staticcheck ./...
+
+cyclo:
+	go tool gocyclo -over 10 .
+
+sec:
+	go tool gosec ./...
+
+vulncheck:
+	go tool govulncheck ./...
+
+validate: test lint staticcheck cyclo sec vulncheck
 	@echo "Validation finished with success..."

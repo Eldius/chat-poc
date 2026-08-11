@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"chat-poc/internal/client/llm"
-	"chat-poc/internal/service"
-	"fmt"
+	"errors"
 
 	"github.com/spf13/cobra"
 )
@@ -15,23 +13,13 @@ var docAddCmd = &cobra.Command{
 	Long:  `Adds a new document to the database.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(docAddCmdOpts.path) == 0 {
-			return fmt.Errorf("--path flag is required")
+			return errors.New("--path flag is required")
 		}
-		opts, err := llm.LoadOpts()
+		backend, err := newBackend(cmd.Context())
 		if err != nil {
-			return fmt.Errorf("failed to load Ollama options: %w", err)
+			return err
 		}
-		m, err := llm.GetOllamaClient(opts)
-		if err != nil {
-			return fmt.Errorf("failed to create Ollama client: %w", err)
-		}
-		backend, err := llm.NewBackend(m, &opts)
-		if err != nil {
-			return fmt.Errorf("failed to create backend: %w", err)
-		}
-
-		c := service.NewConversation(backend)
-		return c.AddDocument(cmd.Context(), docAddCmdOpts.path)
+		return backend.AddDocument(cmd.Context(), docAddCmdOpts.path)
 	},
 }
 

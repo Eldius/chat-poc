@@ -2,10 +2,11 @@ package cache
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/tmc/langchaingo/llms"
 	bolt "go.etcd.io/bbolt"
 )
@@ -23,6 +24,39 @@ func tempDB(t *testing.T) *bolt.DB {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 	return db
+}
+
+func TestPool(t *testing.T) {
+	p := NewPool()
+	t.Cleanup(func() { _ = p.Close() })
+
+	t.Run("same path returns same handle", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "pool.db")
+
+		db1, err := p.Get(path)
+		assert.NoError(t, err)
+
+		db2, err := p.Get(path)
+		assert.NoError(t, err)
+		assert.Same(t, db1, db2)
+	})
+
+	t.Run("unopenable path returns error", func(t *testing.T) {
+		_, err := p.Get(filepath.Join(t.TempDir(), "missing-dir", "db.db"))
+		assert.Error(t, err)
+	})
+
+	t.Run("close releases handles", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "close.db")
+		_, err := p.Get(path)
+		assert.NoError(t, err)
+		assert.NoError(t, p.Close())
+
+		// After Close, the path is forgotten and can be reopened.
+		db, err := p.Get(path)
+		assert.NoError(t, err)
+		assert.NotNil(t, db)
+	})
 }
 
 func TestBoltDBBackend_PutAndGet(t *testing.T) {
@@ -61,9 +95,11 @@ func TestBoltDBBackend_List(t *testing.T) {
 	b.Put(ctx, "a", &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "1"}}})
 	b.Put(ctx, "b", &llms.ContentResponse{Choices: []*llms.ContentChoice{{Content: "2"}}})
 
-	if err := b.List(ctx); err != nil {
+	entries, err := b.List(ctx)
+	if err != nil {
 		t.Fatalf("List failed: %v", err)
 	}
+	assert.Len(t, entries, 2)
 }
 
 func TestBoltDBBackend_OverrideValue(t *testing.T) {

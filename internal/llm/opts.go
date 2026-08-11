@@ -42,10 +42,25 @@ func LoadOpts() (Opts, error) {
 		return opts, err
 	}
 
-	//if b, err := yaml.Marshal(opts); err == nil {
-	if b, err := json.MarshalIndent(opts, "", "    "); err == nil {
+	if b, err := json.MarshalIndent(opts.logView(), "", "    "); err == nil {
 		slog.With("backend_opts", string(b)).Info("backend opts")
 	}
 
 	return opts, nil
+}
+
+// optsLogView is Opts without secrets, safe to log.
+type optsLogView struct {
+	Endpoint   string         `json:"endpoint"`
+	Type       BackendType    `json:"type"`
+	Generation GenerationOpts `json:"generation"`
+}
+
+// logView returns a copy of opts stripped of the API key.
+func (o Opts) logView() optsLogView {
+	return optsLogView{
+		Endpoint:   o.Endpoint,
+		Type:       o.Type,
+		Generation: o.Generation,
+	}
 }

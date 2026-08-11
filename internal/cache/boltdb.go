@@ -3,7 +3,9 @@ package cache
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/tmc/langchaingo/llms"
@@ -15,39 +17,59 @@ var (
 	_ cache.Backend = &BoltDBBackend{}
 )
 
-var (
-	dbMap   = make(map[string]*bolt.DB)
-	dbMapMu sync.RWMutex
-)
+const bucketName = "response_cache"
 
-type BoltDBBackend struct {
-	db *bolt.DB
+// Pool manages shared open BoltDB handles keyed by file path.
+type Pool struct {
+	mu  sync.RWMutex
+	dbs map[string]*bolt.DB
 }
 
-func GetDB(path string) (*bolt.DB, error) {
-	dbMapMu.RLock()
-	db, ok := dbMap[path]
-	dbMapMu.RUnlock()
+func NewPool() *Pool {
+	return &Pool{dbs: make(map[string]*bolt.DB)}
+}
+
+// Get returns the pooled handle for path, opening it on first use.
+func (p *Pool) Get(path string) (*bolt.DB, error) {
+	p.mu.RLock()
+	db, ok := p.dbs[path]
+	p.mu.RUnlock()
 	if ok {
 		return db, nil
 	}
 
-	dbMapMu.Lock()
-	defer dbMapMu.Unlock()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
-	if db, ok := dbMap[path]; ok {
+	if db, ok := p.dbs[path]; ok {
 		return db, nil
 	}
 
-	opts := bolt.DefaultOptions
-	opts.ReadOnly = false
-
-	db, err := bolt.Open(path, 0600, opts)
+	db, err := bolt.Open(path, 0600, bolt.DefaultOptions)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("opening bolt db %q: %w", path, err)
 	}
-	dbMap[path] = db
+	p.dbs[path] = db
 	return db, nil
+}
+
+// Close closes all pooled handles.
+func (p *Pool) Close() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	var errs []error
+	for path, db := range p.dbs {
+		if err := db.Close(); err != nil {
+			errs = append(errs, fmt.Errorf("closing bolt db %q: %w", path, err))
+		}
+		delete(p.dbs, path)
+	}
+	return errors.Join(errs...)
+}
+
+type BoltDBBackend struct {
+	db *bolt.DB
 }
 
 func NewBoltDBBackend(db *bolt.DB) *BoltDBBackend {
@@ -57,13 +79,14 @@ func NewBoltDBBackend(db *bolt.DB) *BoltDBBackend {
 func (b *BoltDBBackend) Get(ctx context.Context, key string) *llms.ContentResponse {
 	tx, err := b.db.Begin(false)
 	if err != nil {
+		slog.WarnContext(ctx, "cache get: beginning tx", "error", err)
 		return nil
 	}
 	defer func() {
 		_ = tx.Rollback()
 	}()
 
-	bucket := tx.Bucket([]byte("response_cache"))
+	bucket := tx.Bucket([]byte(bucketName))
 	if bucket == nil {
 		return nil
 	}
@@ -75,61 +98,83 @@ func (b *BoltDBBackend) Get(ctx context.Context, key string) *llms.ContentRespon
 
 	var response llms.ContentResponse
 	if err := json.Unmarshal(element, &response); err != nil {
+		slog.WarnContext(ctx, "cache get: unmarshaling entry", "key", key, "error", err)
 		return nil
 	}
 
 	return &response
 }
 
+// Put stores a response. The langchaingo cache.Backend interface has no error
+// return, so failures are logged and treated as a cache skip.
 func (b *BoltDBBackend) Put(ctx context.Context, key string, response *llms.ContentResponse) {
-	bucket, tx, err := b.getBucket(ctx, true)
+	bucket, tx, err := b.getBucket(true)
 	if err != nil {
+		slog.WarnContext(ctx, "cache put: opening bucket", "error", err)
 		return
 	}
 	defer func() {
 		_ = tx.Rollback()
 	}()
-	element, _ := json.Marshal(response)
-	if err := bucket.Put([]byte(key), element); err != nil {
+
+	element, err := json.Marshal(response)
+	if err != nil {
+		slog.WarnContext(ctx, "cache put: marshaling response", "key", key, "error", err)
 		return
 	}
-
+	if err := bucket.Put([]byte(key), element); err != nil {
+		slog.WarnContext(ctx, "cache put: writing entry", "key", key, "error", err)
+		return
+	}
 	if err := tx.Commit(); err != nil {
+		slog.WarnContext(ctx, "cache put: committing tx", "key", key, "error", err)
 		return
 	}
 	if err := b.db.Sync(); err != nil {
-		return
+		slog.WarnContext(ctx, "cache put: syncing db", "key", key, "error", err)
 	}
 }
 
-func (b *BoltDBBackend) List(ctx context.Context) error {
+// List returns all cached entries.
+func (b *BoltDBBackend) List(ctx context.Context) ([]Entry, error) {
 	tx, err := b.db.Begin(false)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer func() {
 		_ = tx.Rollback()
 	}()
 
-	bucket := tx.Bucket([]byte("response_cache"))
+	bucket := tx.Bucket([]byte(bucketName))
 	if bucket == nil {
-		return nil
+		return nil, nil
 	}
 
+	var entries []Entry
 	cursor := bucket.Cursor()
 	for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
-		fmt.Printf("- %s\n  %s\n", string(k), string(v))
+		var response llms.ContentResponse
+		if err := json.Unmarshal(v, &response); err != nil {
+			return nil, fmt.Errorf("unmarshaling cache entry %q: %w", string(k), err)
+		}
+		entries = append(entries, Entry{Key: string(k), Response: response})
 	}
 
-	return nil
+	return entries, nil
 }
 
-func (b *BoltDBBackend) getBucket(_ context.Context, writable bool) (*bolt.Bucket, *bolt.Tx, error) {
+// Entry is a single cached request/response pair.
+type Entry struct {
+	Key      string
+	Response llms.ContentResponse
+}
+
+func (b *BoltDBBackend) getBucket(writable bool) (*bolt.Bucket, *bolt.Tx, error) {
 	tx, err := b.db.Begin(writable)
 	if err != nil {
 		return nil, nil, err
 	}
-	bucket, err := tx.CreateBucketIfNotExists([]byte("response_cache"))
+	bucket, err := tx.CreateBucketIfNotExists([]byte(bucketName))
 	if err != nil {
 		_ = tx.Rollback()
 		return nil, nil, err
