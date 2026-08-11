@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 
@@ -37,15 +38,9 @@ func TestBoltDBBackend_PutAndGet(t *testing.T) {
 
 	b.Put(ctx, "key1", resp)
 	got := b.Get(ctx, "key1")
-	if got == nil {
-		t.Fatal("expected non-nil response")
-	}
-	if len(got.Choices) == 0 {
-		t.Fatal("expected at least one choice")
-	}
-	if got.Choices[0].Content != "hello world" {
-		t.Fatalf("expected 'hello world', got '%s'", got.Choices[0].Content)
-	}
+	assert.NotNil(t, got, "expected non-nil response")
+	assert.Greater(t, len(got.Choices), 0, "expected at least one choice")
+	assert.Equal(t, "hello world", got.Choices[0].Content, "expected 'hello world', got '%s'", got.Choices[0].Content)
 }
 
 func TestBoltDBBackend_GetMissingKey(t *testing.T) {
