@@ -42,9 +42,6 @@ cover:
 lint:
 	golangci-lint run
 
-staticcheck:
-	go tool staticcheck ./...
-
 cyclo:
 	go tool gocyclo -over 10 .
 
@@ -54,5 +51,5 @@ sec:
 vulncheck:
 	go tool govulncheck ./...
 
-validate: test lint staticcheck cyclo sec vulncheck
+validate: test lint cyclo sec vulncheck
 	@echo "Validation finished with success..."
